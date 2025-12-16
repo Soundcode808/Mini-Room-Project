@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Miniroom Project: Reboot Prototype v1.3 (Tail System Fixed)</title>
+    <title>Miniroom: Reboot v1.7 (Drift, Ripple Grid, Serpent Tail)</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+KR:wght@300;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
+        /* --- Global Reset & Body --- */
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050814;
+            background-color: #020205; /* Deep Void */
             color: #fff;
             font-family: 'Noto Sans KR', sans-serif;
             touch-action: none;
+            user-select: none;
         }
 
         #gameCanvas {
@@ -22,7 +24,7 @@
             height: 100vh;
         }
 
-        /* UI 레이어 */
+        /* --- UI Layer & Layout --- */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -33,263 +35,464 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
+            padding: 24px;
             box-sizing: border-box;
+            z-index: 10;
         }
 
-        /* HUD */
+        /* --- HUD (Status Panel) --- */
         .hud-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            pointer-events: none;
         }
 
         .status-panel {
-            background: rgba(10, 20, 40, 0.85);
-            border: 1px solid #00ffff;
-            padding: 15px;
-            border-radius: 8px;
-            backdrop-filter: blur(8px);
-            font-family: 'Orbitron', sans-serif;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
             pointer-events: auto;
-            min-width: 250px;
+            background: rgba(10, 15, 30, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-left: 4px solid #00e5ff;
+            padding: 20px;
+            border-radius: 4px;
+            min-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .status-panel:hover {
+            border-color: rgba(0, 229, 255, 0.6);
+            box-shadow: 0 8px 40px rgba(0, 229, 255, 0.15);
         }
 
         .stat-row {
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 13px;
+            letter-spacing: 0.5px;
         }
-        
-        /* AP STREAK */
+
+        .label {
+            color: #88aadd;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .value {
+            color: #fff;
+            font-weight: 700;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+        }
+
         #ap-streak-row {
-            margin-top: 10px;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             color: #64dd17;
-            text-shadow: 0 0 5px rgba(100, 221, 23, 0.5);
-            font-size: 10px;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(100, 221, 23, 0.6);
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
         }
 
-        .label { color: #aaa; font-size: 11px; }
-        .value { color: #fff; font-weight: bold; font-size: 14px; }
-
-        /* 게이지 바 */
+        /* --- Progress Bars --- */
         .bar-container {
             width: 100%;
             height: 6px;
-            background: #1a1a2e;
-            margin-top: 4px;
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 3px;
+            margin-bottom: 12px;
             overflow: hidden;
             position: relative;
         }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+        }
         
-        .bar-fill { height: 100%; transition: width 0.1s; }
-        .wp-fill { background: linear-gradient(90deg, #d500f9, #00e5ff); }
-        .aura-fill { background: linear-gradient(90deg, #ff9100, #ffea00); }
-        .stamina-fill { background: linear-gradient(90deg, #00c853, #64dd17); }
+        .wp-fill { background: linear-gradient(90deg, #aa00ff, #d500f9); box-shadow: 0 0 12px rgba(213, 0, 249, 0.6); }
+        .aura-fill { background: linear-gradient(90deg, #ff6d00, #ffea00); box-shadow: 0 0 12px rgba(255, 234, 0, 0.6); }
+        .stamina-fill { background: linear-gradient(90deg, #00c853, #64dd17); box-shadow: 0 0 12px rgba(100, 221, 23, 0.6); }
 
-        .warning { animation: pulse-red 1s infinite; }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 rgba(255, 0, 0, 0); }
-            50% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.8); }
-            100% { box-shadow: 0 0 0 rgba(255, 0, 0, 0); }
-        }
-
-        /* 설정 패널 */
-        #settings-panel {
-            background: rgba(8, 12, 24, 0.95);
-            border-left: 2px solid #00e5ff;
-            padding: 15px;
-            width: 250px;
-            pointer-events: auto;
-            font-size: 12px;
-            transform: translateX(110%);
-            transition: transform 0.3s;
-        }
-        #settings-panel.active { transform: translateX(0); }
-        #settings-panel h3 { color: #00e5ff; margin-top: 0; font-family: 'Orbitron', sans-serif; }
-        .setting-group { margin-bottom: 15px; }
-        .setting-group label { display: block; color: #ccc; margin-bottom: 4px; }
-        .setting-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #00e5ff; }
-        .setting-val { float: right; color: #00e5ff; }
-
-        /* 설정 토글 버튼 */
+        /* --- Settings Toggle Button --- */
         #settings-toggle {
-            position: absolute; top: 20px; right: 20px;
-            background: rgba(15, 25, 50, 0.9); border: 1px solid #00e5ff;
-            color: #00e5ff; padding: 10px; border-radius: 50%;
-            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; pointer-events: auto; z-index: 100;
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+            pointer-events: auto;
+            width: 48px;
+            height: 48px;
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #00e5ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+            z-index: 20;
         }
 
-        /* 하단 업그레이드 패널 (제거) */
-        .upgrade-panel {
-            height: 80px; 
-            display: none; 
+        #settings-toggle:hover {
+            background: rgba(0, 229, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            transform: rotate(90deg);
+        }
+
+        /* --- Settings Panel --- */
+        #settings-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background: rgba(5, 8, 16, 0.95);
+            border-left: 1px solid #00e5ff;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
+            padding: 80px 30px 30px 30px;
+            box-sizing: border-box;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            pointer-events: auto;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        #settings-panel.active {
+            transform: translateX(0);
+        }
+
+        #settings-panel h3 {
+            margin: 0 0 10px 0;
+            color: #00e5ff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            text-transform: uppercase;
+            border-bottom: 2px solid rgba(0, 229, 255, 0.2);
+            padding-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .setting-group label {
+            color: #ccc;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: #2a3b55;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #00e5ff;
+            box-shadow: 0 0 10px #00e5ff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 229, 255, 0.05);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            color: #00e5ff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+        .action-btn:hover {
+            background: rgba(0, 229, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+            border-color: #00e5ff;
+        }
+        .action-btn.danger {
+            border-color: #ff3d00;
+            color: #ff3d00;
+            background: rgba(255, 61, 0, 0.05);
+        }
+        .action-btn.danger:hover {
+            background: rgba(255, 61, 0, 0.15);
+            box-shadow: 0 0 20px rgba(255, 61, 0, 0.2);
+        }
+
+        /* --- Aura Refill Button --- */
+        #aura-refill-btn {
+            pointer-events: auto;
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ff9100;
+            color: #ff9100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 20px rgba(255, 145, 0, 0.2);
+            z-index: 5;
+        }
+
+        #aura-refill-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255, 145, 0, 0.1);
+            box-shadow: 0 0 40px rgba(255, 145, 0, 0.5);
+        }
+
+        #aura-refill-btn span.icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        #aura-refill-btn span.cost {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* --- Notification & Key Guide --- */
+        #notification {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 36px;
+            color: #fff;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
+            letter-spacing: 4px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 100;
         }
         
-        /* 오프닝 오버레이 */
+        .key-guide {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            line-height: 1.6;
+            font-family: 'Orbitron', sans-serif;
+            pointer-events: none;
+        }
+
+        /* --- Opening Overlay --- */
         #opening-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #050814;
+            background: #020205;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 999;
             flex-direction: column;
+            z-index: 9999;
+            transition: opacity 0.8s ease;
+        }
+
+        .title-main {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            color: #00e5ff;
+            text-shadow: 0 0 60px rgba(0, 229, 255, 0.6);
+            margin: 0;
+            letter-spacing: 4px;
+        }
+
+        .title-sub {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #fff;
+            opacity: 0.7;
+            letter-spacing: 8px;
+            margin-top: 10px;
+            margin-bottom: 60px;
         }
 
         .start-btn {
-            padding: 15px 45px;
+            padding: 18px 50px;
             background: transparent;
             border: 2px solid #00e5ff;
             color: #00e5ff;
             font-family: 'Orbitron', sans-serif;
             font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
             cursor: pointer;
             transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
         .start-btn:hover {
             background: #00e5ff;
-            color: #000;
-            box-shadow: 0 0 40px rgba(0, 229, 255, 0.6);
+            color: #020205;
+            box-shadow: 0 0 50px rgba(0, 229, 255, 0.8);
         }
-        
-        #aura-refill-btn {
-            position: absolute;
-            bottom: 20px; 
-            right: 20px;
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            border: 2px solid #ff9100;
-            background: rgba(0,0,0,0.6);
-            color: #ff9100;
-            font-size: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            pointer-events: auto;
-            backdrop-filter: blur(4px);
-            opacity: 0;
-            transition: all 0.3s;
-            box-shadow: 0 0 15px rgba(255, 145, 0, 0.3);
-        }
-        #aura-refill-btn:hover { background: #ff9100; color: #000; box-shadow: 0 0 30px #ff9100; }
-        #aura-refill-cost { position: absolute; bottom: -22px; width: 100%; text-align: center; font-size: 11px; color: #eee; text-shadow: 0 0 2px black; }
 
-        .key-guide {
-            position: absolute;
-            bottom: 20px; 
-            left: 20px;
-            color: #667;
-            font-size: 11px;
-            line-height: 1.5;
-        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    
     <div id="ui-layer">
-        
-        <div id="settings-toggle" onclick="app.toggleSettings()">⚙️</div>
-
         <div class="hud-top">
             <div class="status-panel" id="status-panel" style="opacity: 0;">
                 <div class="stat-row">
-                    <span class="label">VESSEL (WP)</span>
+                    <span class="label">Vessel (WP)</span>
                     <span class="value"><span id="wp-val">0</span> / <span id="max-wp-val">100</span></span>
                 </div>
-                <div class="bar-container"><div id="wp-bar" class="bar-fill wp-fill" style="width: 0%"></div></div>
-                <div style="height: 6px;"></div>
-                
+                <div class="bar-container">
+                    <div id="wp-bar" class="bar-fill wp-fill"></div>
+                </div>
+
                 <div class="stat-row">
-                    <span class="label">AURA</span>
+                    <span class="label">Aura Energy</span>
                     <span class="value" id="aura-text">100%</span>
                 </div>
-                <div class="bar-container"><div id="aura-bar" class="bar-fill aura-fill" style="width: 100%"></div></div>
-                <div style="height: 6px;"></div>
+                <div class="bar-container">
+                    <div id="aura-bar" class="bar-fill aura-fill"></div>
+                </div>
 
                 <div class="stat-row">
-                    <span class="label">STAMINA</span>
+                    <span class="label">Stamina</span>
                     <span class="value" id="stamina-text">100%</span>
                 </div>
-                <div class="bar-container"><div id="stamina-bar" class="bar-fill stamina-fill" style="width: 100%"></div></div>
+                <div class="bar-container">
+                    <div id="stamina-bar" class="bar-fill stamina-fill"></div>
+                </div>
 
-                <div style="height: 6px;"></div>
+                <div style="margin-top: 16px;"></div>
 
-                <!-- AP/CP 표시 -->
                 <div class="stat-row">
-                    <span class="label">AP RATE (MOVE)</span>
+                    <span class="label">AP Rate</span>
                     <span class="value"><span id="ap-rate-val">0.00</span> / sec</span>
                 </div>
                 <div class="stat-row">
-                    <span class="label">CP GAIN (COLLIDE)</span>
+                    <span class="label">CP Gain</span>
                     <span class="value"><span id="cp-gain-val">10</span> WP</span>
                 </div>
 
                 <div id="ap-streak-row" style="opacity: 0;">
-                    AP Streak: <span id="ap-streak-count">0</span> (+<span id="ap-streak-bonus">0.0</span>%)
+                    <span class="label" style="color: #64dd17;">AP Streak</span>
+                    <span>x<span id="ap-streak-count">0</span> (+<span id="ap-streak-bonus">0.0</span>%)</span>
                 </div>
             </div>
 
-            <!-- 설정 패널 -->
-            <div id="settings-panel">
-                <h3>⚙️ SETTINGS / DEV</h3>
-                <div class="setting-group">
-                    <label>Volume <span id="val-volume" class="setting-val">100%</span></label>
-                    <input type="range" id="sl-volume" min="0" max="100" step="1" value="100">
-                </div>
-                <div class="setting-group">
-                    <button onclick="app.toggleMute()" id="mute-btn" style="width: 100%; padding: 8px; background: #223; color: #00e5ff; border: 1px solid #445; cursor: pointer; border-radius: 4px;">🔊 Toggle Mute</button>
-                </div>
-                <div class="setting-group">
-                    <label>AP Gain (Move) <span id="val-ap-gain" class="setting-val">1.0</span></label>
-                    <input type="range" id="sl-ap-gain" min="0.1" max="5.0" step="0.1" value="1.0">
-                </div>
-                <div class="setting-group">
-                    <label>CP Gain (Collide) <span id="val-cp-gain" class="setting-val">10</span></label>
-                    <input type="range" id="sl-cp-gain" min="1" max="50" step="1" value="10">
-                </div>
-                <div class="setting-group">
-                    <button onclick="app.resetGame()" style="width: 100%; padding: 8px; background: #d500f9; color: #fff; border: 1px solid #d500f9; cursor: pointer; border-radius: 4px; font-weight: bold;">WORLD RESET</button>
-                </div>
+            <div id="settings-toggle" onclick="app.toggleSettings()">⚙️</div>
+        </div>
+
+        <div id="settings-panel">
+            <h3>System Settings</h3>
+            
+            <div class="setting-group">
+                <label>Master Volume <span id="val-volume" style="color:#00e5ff;">100%</span></label>
+                <input type="range" id="sl-volume" min="0" max="100" step="1" value="100">
+            </div>
+
+            <div class="setting-group">
+                <button onclick="app.toggleMute()" id="mute-btn" class="action-btn">🔊 Sound On</button>
+            </div>
+
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 10px 0;"></div>
+
+            <div class="setting-group">
+                <label>AP Gain Multiplier <span id="val-ap-gain" style="color:#00e5ff;">1.0</span></label>
+                <input type="range" id="sl-ap-gain" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="setting-group">
+                <label>CP Reward <span id="val-cp-gain" style="color:#00e5ff;">10</span></label>
+                <input type="range" id="sl-cp-gain" min="1" max="50" step="1" value="10">
+            </div>
+
+            <div style="margin-top: auto;">
+                <button onclick="app.resetGame()" class="action-btn danger">⚠ World Reset</button>
             </div>
         </div>
 
         <div id="notification"></div>
-        <div id="aura-refill-btn" onclick="app.refillAura()">💡<span id="aura-refill-cost">1 WP</span></div>
-        <div class="key-guide">WASD / Arrow: Move<br>Shift (Hold): Sprint<br>Mouse Wheel: Zoom</div>
 
-        <!-- 업그레이드 패널 제거 -->
-        <div class="upgrade-panel" id="upgrade-panel"></div>
+        <div class="key-guide">
+            [WASD] Move &nbsp; [SHIFT] Drift/Sprint &nbsp; [WHEEL] Zoom
+        </div>
+
+        <div id="aura-refill-btn" onclick="app.refillAura()">
+            <span class="icon">⚡</span>
+            <span class="cost" id="aura-refill-cost">1 WP</span>
+        </div>
     </div>
 
     <div id="opening-overlay">
-        <h1 style="font-family: 'Orbitron'; color: #00e5ff; font-size: 3.5rem; margin-bottom: 10px; text-shadow: 0 0 30px rgba(0, 229, 255, 0.8);">MINIROOM</h1>
-        <h2 style="font-family: 'Orbitron'; color: #fff; font-size: 1.5rem; margin-top: 0; margin-bottom: 40px; letter-spacing: 5px; opacity: 0.8;">REBOOT: GRAVITY</h2>
-        <p style="color: #889; margin-bottom: 40px; font-size: 0.9rem;">v1.3 (Tail System Fixed)</p>
-        <button class="start-btn" onclick="app.startSequence()">INITIALIZE</button>
+        <h1 class="title-main">MINIROOM</h1>
+        <h2 class="title-sub">REBOOT: GRAVITY</h2>
+        <button class="start-btn" onclick="app.startSequence()">INITIALIZE SYSTEM</button>
     </div>
 
 <script>
 /**
- * MINIROOM REBOOT: GRAVITY v1.3 (Tail System Fixed)
- * - FIX: Implemented robust Path History and segment assignment to fix tail movement.
- * - FIXED/CONFIRMED: Tail (Hose) system is fully operational for both Player and Rivals.
- * - REMOVED: Upgrade system (UI, stats, logic). Base values are now fixed.
+ * MINIROOM REBOOT: GRAVITY v1.7
+ * - PHYSICS: Drift/Slide added (High Accel, Low Brake Friction).
+ * - GRID: Ripple Shockwave & Lensing without Twisting.
+ * - TAIL: Overlapping Spheres (Serpent style), spacing reduced for hose effect.
+ * - FX: Hyper particles on collect/collision.
  */
 
 class MiniroomApp {
@@ -297,69 +500,53 @@ class MiniroomApp {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // Game State
         this.state = 'IDLE'; 
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         this.frameCount = 0;
         
-        // Physics & World
         this.camera = { x: 0, y: 0, zoom: 1.0, targetZoom: 1.0 };
-        this.friction = 0.94;
+        this.friction = 0.97; // Very slippery for drift
         this.viewTilt = 0.55; 
         
-        // Player
+        this.physics = {
+            accel: 1.2,       // High accel for quick moves
+            friction: 0.97,   // High friction = low drag = slippery
+            brake: 0.92,      // Brake friction
+        };
+
         this.player = {
             x: 0, y: 0, vx: 0, vy: 0, 
             radius: 15, color: '#ffffff',
             aura: 100, maxAura: 100, auraRadius: 150,
             stamina: 100, maxStamina: 100,
-            state: 'NORMAL',
-            resonanceTimer: 0,
-            trailTimer: 0,
-            apStreak: 0,
-            apStreakTimeout: null,
-            tail: [], // Collected segment objects {color, x, y}
-            path: []  // Head position history {x, y}
+            state: 'NORMAL', resonanceTimer: 0, trailTimer: 0,
+            apStreak: 0, apStreakTimeout: null,
+            tail: [], path: []
         };
 
-        // Rivals (AI)
         this.rivals = [];
-
-        // Economy
-        this.wp = 0;
-        this.apAccumulator = 0;
-        this.maxWp = 100;
+        this.wp = 0; this.apAccumulator = 0; this.maxWp = 100;
         
-        // Stats (Fixed values)
         this.stats = {
-            speed: 0.25,      // Base Movement Speed
-            maxSpeed: 6,      // Base Max Speed
-            sprintMult: 2.0,  // Sprint Multiplier
-            vision: 1.0,      // Vision Range Multiplier
-            magnetRange: 150, // Attraction Range (Fixed)
-            magnetForce: 0.05 // Attraction Force (Fixed)
+            speed: 0.25, maxSpeed: 12, sprintMult: 1.5,
+            vision: 1.0, magnetRange: 200, magnetForce: 0.1
         };
 
         this.devSettings = { apGain: 1.0, cpGain: 10, auraDecay: 0.05 };
 
-        // Objects
-        this.gridSize = 100;
         this.particles = [];
         this.cubes = []; 
         this.shockwaves = [];
         this.sonarPulses = [];
-        this.DIGESTION_RATE = 30; // 1 cube consumed every 30 frames (0.5 seconds)
-        this.TAIL_SEGMENT_SPACING = 10; // Distance between segments on path
-        this.TAIL_POINT_SIZE = 6;
+        
+        this.DIGESTION_RATE = 30; 
+        this.TAIL_SEGMENT_SPACING = 6; // Close overlap for hose look
+        this.TRAIL_SPAWN_RATE = 120; // 2 sec
 
-        // Input
         this.keys = {};
-
-        // Sound & Settings
         this.volume = 1.0;
         this.soundEnabled = true;
-        this.settingsOpen = false;
         this.sounds = {};
         
         this.init();
@@ -377,20 +564,18 @@ class MiniroomApp {
 
         requestAnimationFrame(() => this.loop());
 
-        // Spawn Entities
         for(let i=0; i<4; i++) this.spawnRival();
-        for(let i=0; i<40; i++) this.spawnCubeRandomly();
+        for(let i=0; i<50; i++) this.spawnCubeRandomly();
     }
 
     spawnRival() {
         this.rivals.push({
             x: (Math.random() - 0.5) * 2500, y: (Math.random() - 0.5) * 2500,
             vx: 0, vy: 0,
-            radius: 15, color: `hsl(${Math.random()*360}, 70%, 50%)`, // Unique color for rivals
+            radius: 15, hue: Math.random() * 360, color: '#fff',
             moveTimer: 0, moveAngle: 0,
-            state: 'NORMAL', resonanceTimer: 0, trailTimer: Math.random() * 420,
-            tail: [], // Collected segment objects {color, x, y}
-            path: []  // Head position history {x, y}
+            state: 'NORMAL', resonanceTimer: 0, trailTimer: Math.random() * this.TRAIL_SPAWN_RATE,
+            tail: [], path: []
         });
     }
 
@@ -401,26 +586,22 @@ class MiniroomApp {
     }
 
     initAudio() {
-        // Instantiate all Audio objects first
         this.sounds.bgm = new Audio('BGM.MP3');
         this.sounds.bgm.loop = true; 
         this.sounds.hit = new Audio('https://assets.codepen.io/21542/hit_hurt.mp3'); 
         this.sounds.pickup = new Audio('https://assets.codepen.io/21542/coin_collect.mp3'); 
         this.sounds.upgrade = new Audio('https://assets.codepen.io/21542/powerup.mp3'); 
         this.sounds.resonance = new Audio('https://assets.codepen.io/21542/explosion.mp3'); 
-        
-        // Then set volumes
         this.setSoundVolumes();
     }
     
     setSoundVolumes() {
-        const effVolume = this.volume * 0.4;
-        
-        if (this.sounds.bgm) this.sounds.bgm.volume = this.volume * 0.25;
-        if (this.sounds.hit) this.sounds.hit.volume = effVolume;
-        if (this.sounds.pickup) this.sounds.pickup.volume = effVolume;
-        if (this.sounds.upgrade) this.sounds.upgrade.volume = this.volume * 0.5;
-        if (this.sounds.resonance) this.sounds.resonance.volume = this.volume * 0.6;
+        const v = this.volume;
+        if(this.sounds.bgm) this.sounds.bgm.volume = v * 0.3;
+        if(this.sounds.hit) this.sounds.hit.volume = v * 0.5;
+        if(this.sounds.pickup) this.sounds.pickup.volume = v * 0.4;
+        if(this.sounds.upgrade) this.sounds.upgrade.volume = v * 0.5;
+        if(this.sounds.resonance) this.sounds.resonance.volume = v * 0.7;
     }
 
     playSound(name) { 
@@ -431,22 +612,20 @@ class MiniroomApp {
 
     toggleMute() {
         this.soundEnabled = !this.soundEnabled;
-        document.getElementById('mute-btn').innerText = this.soundEnabled ? '🔊 Toggle Mute' : '🔇 Toggle Mute (Muted)';
+        document.getElementById('mute-btn').innerText = this.soundEnabled ? '🔊 Sound On' : '🔇 Muted';
         if (this.sounds.bgm) this.sounds.bgm.muted = !this.soundEnabled;
     }
 
     toggleSettings() {
-        this.settingsOpen = !this.settingsOpen;
         document.getElementById('settings-panel').classList.toggle('active');
     }
 
     bindSettings() {
-        document.getElementById('sl-volume').addEventListener('input', (e) => {
-            this.volume = parseFloat(e.target.value) / 100;
+        document.getElementById('sl-volume').addEventListener('input', e => {
+            this.volume = e.target.value / 100;
             document.getElementById('val-volume').innerText = e.target.value + '%';
             this.setSoundVolumes();
         });
-
         document.getElementById('sl-ap-gain').addEventListener('input', e => { 
             this.devSettings.apGain = parseFloat(e.target.value); 
             document.getElementById('val-ap-gain').innerText = e.target.value; 
@@ -463,27 +642,32 @@ class MiniroomApp {
     }
     
     startSequence() {
-        if(this.soundEnabled) this.sounds.bgm.play().catch(()=>{});
-        document.getElementById('opening-overlay').style.display='none';
+        if(this.soundEnabled && this.sounds.bgm) this.sounds.bgm.play().catch(()=>{});
+        const overlay = document.getElementById('opening-overlay');
+        overlay.style.opacity = 0;
+        setTimeout(() => overlay.style.display = 'none', 800);
+        
         this.state = 'PLAY';
         document.getElementById('status-panel').style.opacity=1;
-        document.getElementById('aura-refill-btn').style.opacity=1;
-        this.spawnShockwave(0,0,500);
+        this.spawnShockwave(0,0,800, 1.5);
         this.showNotification("SYSTEM ONLINE");
     }
 
     loop() {
         this.frameCount++;
-        this.ctx.clearRect(0,0,this.width,this.height);
+        
+        this.ctx.fillStyle = '#020205';
+        this.ctx.fillRect(0,0,this.width,this.height);
 
         if(this.state === 'PLAY') this.updatePlay();
 
         this.ctx.save();
         this.ctx.translate(this.width/2, this.height/2);
         
-        // Camera Shake
         if (this.shakeStrength > 0) {
-            this.ctx.translate((Math.random()-0.5)*this.shakeStrength, (Math.random()-0.5)*this.shakeStrength);
+            const dx = (Math.random()-0.5)*this.shakeStrength;
+            const dy = (Math.random()-0.5)*this.shakeStrength;
+            this.ctx.translate(dx, dy);
             this.shakeStrength *= 0.9;
             if(this.shakeStrength < 0.5) this.shakeStrength = 0;
         }
@@ -491,700 +675,602 @@ class MiniroomApp {
         this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * 0.1;
         this.ctx.scale(this.camera.zoom, this.camera.zoom);
         
-        // Tilt World
         this.ctx.scale(1, this.viewTilt);
         this.ctx.translate(-this.player.x, -this.player.y);
 
         this.drawGravityGrid();
+        this.drawSonar();
         this.drawEntities();
         this.drawRivals();
         this.drawPlayer();
-        this.drawEffects();
-        this.drawSonar();
+        this.drawParticles();
+        this.drawShockwaves();
 
         this.ctx.restore();
+
+        if(this.flashIntensity > 0) {
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashIntensity})`;
+            this.ctx.fillRect(0,0,this.width,this.height);
+            this.flashIntensity *= 0.85;
+            if(this.flashIntensity < 0.01) this.flashIntensity = 0;
+        }
+
         requestAnimationFrame(() => this.loop());
     }
     
-    // --- Tail Movement & Path Tracking Logic ---
+    // --- Physics & Logic ---
+
     updateEntityTail(entity) {
-        // 1. Update Head Position (Movement logic is applied to vx/vy before this call in updatePlay/updateRivals)
-        entity.x += entity.vx; 
-        entity.y += entity.vy;
-
-        // 2. Path Tracking
         const currentHead = { x: entity.x, y: entity.y };
-        
-        if (entity.path.length === 0) {
-            // Initialize path
-            entity.path.push(currentHead);
-        } else {
-            const lastPathPoint = entity.path[0];
-            const dx = currentHead.x - lastPathPoint.x;
-            const dy = currentHead.y - lastPathPoint.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            // Add new path point only if the distance moved exceeds the spacing threshold
-            if (dist >= this.TAIL_SEGMENT_SPACING) {
-                entity.path.unshift(currentHead); 
-            }
+        if (entity.path.length === 0) entity.path.push(currentHead);
+        else {
+            const last = entity.path[0];
+            const d = Math.sqrt((currentHead.x-last.x)**2 + (currentHead.y-last.y)**2);
+            if (d >= 2) entity.path.unshift(currentHead); // Record more frequently
         }
         
-        // 3. Assign Coordinates to Tail Segments (The collected objects)
-        // Assign coordinates from the path history to the tail segments
-        let segmentIndex = 0;
-        
-        // We iterate through the path to find the positions for the segments
         let pathDistance = 0;
         let segCount = 0;
-
-        // The path points are stored in reverse order (index 0 is newest)
-        // We assign segments starting from path index 1 (the neck)
         for (let i = 1; i < entity.path.length; i++) {
             if (segCount >= entity.tail.length) break;
-
             const p1 = entity.path[i - 1];
             const p2 = entity.path[i];
-            const dx = p1.x - p2.x;
-            const dy = p1.y - p2.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
+            const dist = Math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2);
             pathDistance += dist;
 
-            // Segment placement logic
             while (pathDistance >= this.TAIL_SEGMENT_SPACING && segCount < entity.tail.length) {
-                const overshoot = pathDistance - this.TAIL_SEGMENT_SPACING;
-                
-                // Calculate position between p1 and p2
-                const ratio = overshoot / dist;
-                
-                const segX = p1.x - dx * ratio;
-                const segY = p1.y - dy * ratio;
-
-                entity.tail[segCount].x = segX;
-                entity.tail[segCount].y = segY;
-
-                pathDistance -= this.TAIL_SEGMENT_SPACING; // Deduct one segment's worth of distance
+                const ratio = (pathDistance - this.TAIL_SEGMENT_SPACING) / dist;
+                entity.tail[segCount].x = p1.x - (p1.x - p2.x) * ratio;
+                entity.tail[segCount].y = p1.y - (p1.y - p2.y) * ratio;
+                pathDistance -= this.TAIL_SEGMENT_SPACING;
                 segCount++;
             }
         }
 
-        // 4. Path Trimming: Keep path history length manageable, but always long enough for the tail
-        const maxPathLength = entity.tail.length + 50; 
-        while (entity.path.length > maxPathLength) {
-            entity.path.pop();
-        }
-
-        // 5. Digestion
-        if (entity.tail.length > 0 && this.frameCount % this.DIGESTION_RATE === 0) {
-            entity.tail.pop(); // Consume 1 point from the end
-        }
+        while (entity.path.length > entity.tail.length * 5 + 50) entity.path.pop();
+        if (entity.tail.length > 0 && this.frameCount % this.DIGESTION_RATE === 0) entity.tail.pop();
     }
-    // --- End Tail Movement & Path Tracking Logic ---
 
     updatePlay() {
-        // Player Movement Prep
         let ax = 0, ay = 0;
-        let accel = this.stats.speed;
-        let maxS = this.stats.maxSpeed;
-        
-        const isSprinting = (this.keys['Shift'] || this.keys['ShiftRight']) && this.player.stamina > 0;
-        if (isSprinting) {
-            accel *= 1.5;
-            maxS *= this.stats.sprintMult;
-            this.player.stamina = Math.max(0, this.player.stamina - 1);
-        } else {
-            this.player.stamina = Math.min(this.player.maxStamina, this.player.stamina + 0.5);
-        }
+        const accelForce = (this.keys['Shift']||this.keys['ShiftRight']) && this.player.stamina > 0 ? this.physics.accel * 1.5 : this.physics.accel;
+        const maxS = (this.keys['Shift']||this.keys['ShiftRight']) && this.player.stamina > 0 ? this.stats.maxSpeed * this.stats.sprintMult : this.stats.maxSpeed;
 
-        if (this.player.state === 'RESONANCE') {
-            this.player.resonanceTimer--;
-            if(this.player.resonanceTimer <= 0) this.player.state = 'NORMAL';
-            accel *= 0.5; 
-            maxS *= 0.5;
-        }
-
-        if (this.keys['ArrowUp'] || this.keys['w']) ay -= accel;
-        if (this.keys['ArrowDown'] || this.keys['s']) ay += accel;
-        if (this.keys['ArrowLeft'] || this.keys['a']) ax -= accel;
-        if (this.keys['ArrowRight'] || this.keys['d']) ax += accel;
+        if (this.keys['ArrowUp'] || this.keys['w']) ay -= accelForce;
+        if (this.keys['ArrowDown'] || this.keys['s']) ay += accelForce;
+        if (this.keys['ArrowLeft'] || this.keys['a']) ax -= accelForce;
+        if (this.keys['ArrowRight'] || this.keys['d']) ax += accelForce;
 
         this.player.vx += ax; this.player.vy += ay;
-        this.player.vx *= this.friction; this.player.vy *= this.friction;
+
+        const isMoving = (ax !== 0 || ay !== 0);
+        const friction = isMoving ? this.physics.friction : this.physics.brake;
+        this.player.vx *= friction; this.player.vy *= friction;
 
         const speed = Math.sqrt(this.player.vx**2 + this.player.vy**2);
         if (speed > maxS) {
             const r = maxS/speed;
             this.player.vx *= r; this.player.vy *= r;
         }
-        
-        // --- TAIL UPDATE ---
-        this.updateEntityTail(this.player);
-        // --- END TAIL UPDATE ---
 
+        if ((this.keys['Shift']||this.keys['ShiftRight']) && speed > 1) this.player.stamina = Math.max(0, this.player.stamina - 1.5);
+        else this.player.stamina = Math.min(this.player.maxStamina, this.player.stamina + 0.5);
+
+        if (this.player.state === 'RESONANCE') {
+            this.player.resonanceTimer--;
+            if(this.player.resonanceTimer <= 0) this.player.state = 'NORMAL';
+        }
+
+        this.player.x += this.player.vx; this.player.y += this.player.vy;
+
+        this.updateEntityTail(this.player);
+        
         this.player.trailTimer++;
-        if (this.player.trailTimer >= 420) {
+        if (this.player.trailTimer >= this.TRAIL_SPAWN_RATE) {
             this.player.trailTimer = 0;
             this.spawnTrailCube(this.player.x, this.player.y);
         }
 
-        // AP Gain (WP Streak Bonus Applied)
         if (speed > 0.1) {
             const streakBonus = Math.min(this.player.apStreak * 0.001, 0.05); 
-            this.apAccumulator += (speed * 0.02 * this.devSettings.apGain) * (1 + streakBonus);
-            
+            this.apAccumulator += (speed * 0.03 * this.devSettings.apGain) * (1 + streakBonus);
             if (this.apAccumulator >= 1) { this.addWP(1); this.apAccumulator--; }
         }
-
-        // Streak Decay (5s = 300 frames)
-        if (this.player.apStreakTimeout) clearTimeout(this.player.apStreakTimeout);
         if (this.player.apStreak > 0) {
+            if (this.player.apStreakTimeout) clearTimeout(this.player.apStreakTimeout);
             this.player.apStreakTimeout = setTimeout(() => {
                 this.player.apStreak = Math.max(0, this.player.apStreak - 1);
                 this.updateUI();
-            }, 300 / 60 * 1000); 
+            }, 3000);
         }
+        if(this.player.aura > 0) this.player.aura = Math.max(0, this.player.aura - this.devSettings.auraDecay);
 
-        // Aura Decay
-        if(this.player.aura > 0) {
-            this.player.aura -= this.devSettings.auraDecay;
-            if(this.player.aura <= 0) this.player.aura = 0;
-        }
-
-        if (this.frameCount % 60 === 0 && this.cubes.length < 50) this.spawnCubeNearPlayer();
+        if (this.frameCount % 60 === 0 && this.cubes.length < 60) this.spawnCubeNearPlayer();
+        
+        if (this.frameCount % 120 === 0) this.sonarPulses.push({x: this.player.x, y: this.player.y, r: 0, maxR: 700, alpha: 1});
 
         this.updateRivals();
         this.updateCubes();
-
-        if (this.frameCount % 120 === 0) {
-            this.sonarPulses.push({x: this.player.x, y: this.player.y, r: 0, maxR: 600, alpha: 1});
-        }
-
+        this.updateParticles();
         this.updateUI();
     }
 
     updateRivals() {
-        this.rivals.forEach(rival => {
-            // AI Logic: Simple movement and player aggro
-            if (rival.moveTimer <= 0) {
-                rival.moveTimer = Math.random() * 60 + 30;
-                rival.moveAngle = Math.random() * Math.PI * 2;
+        this.rivals.forEach(r => {
+            if (r.moveTimer <= 0) {
+                r.moveTimer = Math.random() * 60 + 30;
+                r.moveAngle = Math.random() * Math.PI * 2;
             }
-            rival.moveTimer--;
+            r.moveTimer--;
             
-            const dxp = this.player.x - rival.x;
-            const dyp = this.player.y - rival.y;
-            const distP = Math.sqrt(dxp*dxp + dyp*dyp);
+            const dx = this.player.x - r.x;
+            const dy = this.player.y - r.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
             
-            // Movement
-            if (distP < 400 && rival.state === 'NORMAL') {
-                rival.vx += (dxp/distP) * 0.2; rival.vy += (dyp/distP) * 0.2;
+            if (dist < 600 && r.state === 'NORMAL') {
+                r.vx += (dx/dist) * 0.35; r.vy += (dy/dist) * 0.35;
             } else {
-                rival.vx += Math.cos(rival.moveAngle) * 0.1; rival.vy += Math.sin(rival.moveAngle) * 0.1;
+                r.vx += Math.cos(r.moveAngle) * 0.2; r.vy += Math.sin(r.moveAngle) * 0.2;
+            }
+            r.vx *= 0.96; r.vy *= 0.96; // Drift friction
+
+            if (r.state === 'RESONANCE') {
+                r.resonanceTimer--;
+                if (r.resonanceTimer <= 0) r.state = 'NORMAL';
+                r.color = '#ffaa00';
+            } else {
+                r.color = `hsl(${r.hue}, 80%, 60%)`;
             }
 
-            rival.vx *= 0.95; rival.vy *= 0.95;
+            r.x += r.vx; r.y += r.vy;
+            this.updateEntityTail(r);
 
-            // Resonance/Slowdown
-            let accel_mult = 1.0;
-            if (rival.state === 'RESONANCE') {
-                rival.resonanceTimer--;
-                if (rival.resonanceTimer <= 0) { rival.state = 'NORMAL'; rival.color = `hsl(${rival.hue}, 70%, 50%)`; } 
-                else { rival.color = '#ffaa00'; accel_mult = 0.5; }
-            }
-            
-            // Apply velocity * slowdown
-            rival.vx *= accel_mult;
-            rival.vy *= accel_mult;
-
-            // --- TAIL UPDATE ---
-            this.updateEntityTail(rival);
-            // --- END TAIL UPDATE ---
-
-            // Rival Trail
-            rival.trailTimer++;
-            if (rival.trailTimer >= 420) {
-                rival.trailTimer = 0;
-                this.spawnTrailCube(rival.x, rival.y);
+            r.trailTimer++;
+            if (r.trailTimer >= this.TRAIL_SPAWN_RATE) {
+                r.trailTimer = 0;
+                this.spawnTrailCube(r.x, r.y);
             }
 
-            // Player Head to Rival Tail Collision
-            this.checkHeadToTailCollision(this.player, rival);
+            this.checkHeadToTailCollision(this.player, r);
         });
 
-        // Rival Head to Rival Tail & Rival Head to Player Tail Collision
         for (let i = 0; i < this.rivals.length; i++) {
-            const rival = this.rivals[i];
-            
-            // Rival Head to Player Tail
-            this.checkHeadToTailCollision(rival, this.player);
+            const r1 = this.rivals[i];
+            const dP = Math.sqrt((r1.x-this.player.x)**2 + (r1.y-this.player.y)**2);
+            if (dP < r1.radius + this.player.radius + 10) this.triggerResonance(r1, this.player);
 
-            // Rival Head to Rival Tail (other rivals)
+            this.checkHeadToTailCollision(r1, this.player);
+
             for (let j = i + 1; j < this.rivals.length; j++) {
-                const otherRival = this.rivals[j];
-                this.checkHeadToTailCollision(rival, otherRival);
-                this.checkHeadToTailCollision(otherRival, rival); // Check both ways
-            }
-            
-            // Rival Head to Rival Head
-            for (let j = i + 1; j < this.rivals.length; j++) {
-                const otherRival = this.rivals[j];
-                const dx = rival.x - otherRival.x;
-                const dy = rival.y - otherRival.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
+                const r2 = this.rivals[j];
+                const dR = Math.sqrt((r1.x-r2.x)**2 + (r1.y-r2.y)**2);
+                if (dR < r1.radius + r2.radius + 10) this.triggerResonance(r1, r2);
                 
-                if (dist < rival.radius + otherRival.radius + 10) {
-                    this.triggerResonance(rival, otherRival);
-                }
+                this.checkHeadToTailCollision(r1, r2);
+                this.checkHeadToTailCollision(r2, r1);
             }
         }
     }
-    
-    checkHeadToTailCollision(headEntity, tailEntity) {
-        if (headEntity.state === 'RESONANCE' || tailEntity.state === 'RESONANCE') return;
-        if (tailEntity.tail.length === 0) return;
 
-        const headRadius = headEntity.radius;
+    checkHeadToTailCollision(head, tailOwner) {
+        if (head.state === 'RESONANCE' || tailOwner.state === 'RESONANCE') return;
+        if (tailOwner.tail.length < 2) return;
 
-        // Check head vs tail segments
-        // We use the coordinates assigned to the tail objects in updateEntityTail
-        for (let i = 0; i < tailEntity.tail.length; i++) {
-            const segment = tailEntity.tail[i];
+        for (let k = 2; k < tailOwner.tail.length; k++) {
+            const seg = tailOwner.tail[k];
+            if(seg.x === undefined) continue;
+            const dist = Math.sqrt((head.x - seg.x)**2 + (head.y - seg.y)**2);
             
-            // Check only if segment has assigned coordinates
-            if (segment.x === undefined) continue;
-            
-            const segSize = this.TAIL_POINT_SIZE; 
-            const dx = headEntity.x - segment.x;
-            const dy = headEntity.y - segment.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < headRadius + segSize) {
-                // Head hits Tail: Head loses all its points
-                this.scatterPoints(headEntity);
-                
-                // Knockback and slow effect 
-                this.triggerHeadHitEffect(headEntity, tailEntity);
-                
-                // Important: Only trigger once per frame per entity pair
+            if (dist < head.radius + 12) { 
+                this.scatterPoints(head); 
+                this.triggerImpact(head, tailOwner.x, tailOwner.y); 
                 return;
             }
         }
     }
 
-    triggerHeadHitEffect(headEntity, tailEntity) {
-        headEntity.state = 'RESONANCE';
-        headEntity.resonanceTimer = 60; // Shorter stun for tail hits
+    triggerResonance(a, b) {
+        if (a.state === 'RESONANCE' || b.state === 'RESONANCE') {
+            const angle = Math.atan2(a.y - b.y, a.x - b.x);
+            a.vx += Math.cos(angle)*3; a.vy += Math.sin(angle)*3;
+            b.vx -= Math.cos(angle)*3; b.vy -= Math.sin(angle)*3;
+            return;
+        }
         
-        // Simple repel
-        const dx = headEntity.x - tailEntity.x;
-        const dy = headEntity.y - tailEntity.y;
-        const angle = Math.atan2(dy, dx);
-        const power = 10;
-        headEntity.vx = Math.cos(angle) * power;
-        headEntity.vy = Math.sin(angle) * power;
-        
-        this.shakeStrength = 10;
-        this.playSound('hit'); 
+        // Only if both have tails? No, head-head is always resonance
+        const mx = (a.x+b.x)/2; const my = (a.y+b.y)/2;
+        this.spawnShockwave(mx, my, 600, 2.5); 
+        this.spawnParticles(mx, my, 40, '#fff', 'spark'); 
+        this.playSound('resonance');
+        this.shakeStrength = 35;
+        this.flashIntensity = 0.6; 
+
+        if(a===this.player || b===this.player) this.showNotification("RESONANCE!!");
+
+        a.state = b.state = 'RESONANCE';
+        a.resonanceTimer = b.resonanceTimer = 60;
+
+        const angle = Math.atan2(a.y - b.y, a.x - b.x);
+        const force = 20;
+        a.vx = Math.cos(angle)*force; a.vy = Math.sin(angle)*force;
+        b.vx = -Math.cos(angle)*force; b.vy = -Math.sin(angle)*force;
+    }
+
+    triggerImpact(victim, sourceX, sourceY) {
+        this.shakeStrength = 20;
+        this.playSound('hit');
+        this.spawnParticles(victim.x, victim.y, 25, '#ffaa00', 'spark');
+        victim.state = 'RESONANCE'; victim.resonanceTimer = 40;
+        const angle = Math.atan2(victim.y - sourceY, victim.x - sourceX);
+        victim.vx = Math.cos(angle) * 15;
+        victim.vy = Math.sin(angle) * 15;
     }
 
     scatterPoints(entity) {
-        if (entity.tail.length === 0) return;
+        if(entity.tail.length === 0) return;
+        this.showNotification(entity===this.player ? "CRASH! TAIL LOST" : "RIVAL CRASHED!");
+        this.spawnShockwave(entity.x, entity.y, 500, 2.0);
+        this.flashIntensity = 0.4;
         
-        this.showNotification(entity === this.player ? "TAIL LOST!" : "RIVAL TAIL LOST!");
-        
-        // Scatter all points from the tail
-        entity.tail.forEach(seg => {
-            this.cubes.push({
-                x: seg.x + (Math.random()-0.5)*10,
-                y: seg.y + (Math.random()-0.5)*10,
-                size: this.TAIL_POINT_SIZE, angle: Math.random()*Math.PI, color: seg.color || '#ffaa00',
-                vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-                friction: 0.92
+        // CP Gain Logic: Only generate CP/Drops if they had a tail
+        if(entity.tail.length > 0) {
+             entity.tail.forEach(seg => {
+                if(seg.x === undefined) return;
+                this.spawnParticles(seg.x, seg.y, 5, seg.color || '#ffaa00', 'spark');
+                this.cubes.push({
+                    x: seg.x + (Math.random()-0.5)*40,
+                    y: seg.y + (Math.random()-0.5)*40,
+                    size: 6, color: seg.color || '#ffaa00',
+                    vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20,
+                    angle: Math.random()*Math.PI, friction: 0.94
+                });
             });
-        });
-        
-        entity.tail = []; // Empty the tail
-        entity.path = []; // Reset path history
-    }
-
-    triggerResonance(entityA, entityB) {
-        if (entityA.state === 'RESONANCE' || entityB.state === 'RESONANCE') {
-            // Repel
-            const dx = entityA.x - entityB.x;
-            const dy = entityA.y - entityB.y;
-            const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-            const force = 5;
-            entityA.vx += (dx/dist)*force; entityA.vy += (dy/dist)*force;
-            entityB.vx -= (dx/dist)*force; entityB.vy -= (dy/dist)*force;
-            return;
         }
-
-        // Head to Head: Resonance/Knockback, NO point loss
-        this.shakeStrength = 25;
-        this.playSound('resonance');
-        const midX = (entityA.x+entityB.x)/2;
-        const midY = (entityA.y+entityB.y)/2;
-        this.spawnShockwave(midX, midY, 400);
-
-        if (entityA === this.player || entityB === this.player) this.showNotification("RESONANCE DETECTED!");
-
-        entityA.state = 'RESONANCE'; entityA.resonanceTimer = 180;
-        entityB.state = 'RESONANCE'; entityB.resonanceTimer = 180;
-
-        const dx = entityA.x - entityB.x;
-        const dy = entityA.y - entityB.y;
-        const angle = Math.atan2(dy, dx);
-        const power = 18;
-        entityA.vx = Math.cos(angle) * power; entityA.vy = Math.sin(angle) * power;
-        entityB.vx = -Math.cos(angle) * power; entityB.vy = -Math.sin(angle) * power;
+        entity.tail = [];
     }
 
     updateCubes() {
-        this.cubes.forEach((cube, i) => {
-            if (cube.vx) {
-                cube.x += cube.vx; cube.y += cube.vy;
-                cube.vx *= (cube.friction||0.9); cube.vy *= (cube.friction||0.9);
-            }
-
-            const dx = this.player.x - cube.x;
-            const dy = this.player.y - cube.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
+        this.cubes.forEach((c, i) => {
+            if(c.vx) { c.x+=c.vx; c.y+=c.vy; c.vx*=c.friction; c.vy*=c.friction; }
             
-            // Smoother Magnet Logic
-            if (dist < this.stats.magnetRange) {
-                const pullPower = this.stats.magnetForce * 20; 
-                const moveStep = Math.min(dist * 0.1, pullPower);
-                
-                cube.x += (dx/dist) * moveStep;
-                cube.y += (dy/dist) * moveStep;
+            const dx = this.player.x - c.x;
+            const dy = this.player.y - c.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if(dist < this.stats.magnetRange) {
+                const f = (1 - dist/this.stats.magnetRange) * this.stats.speed * 2;
+                c.x += (dx/dist) * f * 6;
+                c.y += (dy/dist) * f * 6;
             }
 
-            // Collect
-            if (dist < this.player.radius + cube.size + 2) {
+            if(dist < this.player.radius + c.size + 15) {
                 this.addWP(this.devSettings.cpGain);
                 this.player.apStreak = Math.min(this.player.apStreak + 1, 50);
                 this.playSound('pickup');
-                this.spawnShockwave(cube.x, cube.y, 40);
                 
-                // Add to tail instead of removing immediately
-                this.player.tail.push({ color: cube.color }); // x, y will be assigned by path tracking
-                this.cubes.splice(i, 1); // Remove from world
-                
-                return;
+                this.spawnParticles(c.x, c.y, 15, c.color, 'burst');
+                this.player.tail.push({color: c.color});
+                this.cubes.splice(i, 1);
             }
         });
+    }
+
+    updateParticles() {
+        for(let i=this.particles.length-1; i>=0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx; p.y += p.vy;
+            p.vx *= 0.92; p.vy *= 0.92; 
+            p.life--;
+            if(p.life <= 0) this.particles.splice(i, 1);
+        }
+    }
+
+    spawnParticles(x, y, count, color, type = 'burst') {
+        for(let i=0; i<count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (type === 'spark' ? Math.random() * 20 + 5 : Math.random() * 10 + 2);
+            this.particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+                life: 30 + Math.random()*30,
+                color: color,
+                size: Math.random()*3 + 1,
+                type: type
+            });
+        }
+    }
+
+    spawnShockwave(x, y, maxR, intensity = 1.0) {
+        this.shockwaves.push({ x, y, r: 10, maxR, alpha: 1.0, intensity });
     }
 
     // --- Drawing ---
 
     drawGravityGrid() {
-        const spacing = 100;
-        const viewportDiagonal = Math.sqrt(this.width**2 + this.height**2);
-        const limit = Math.ceil(viewportDiagonal / this.camera.zoom / spacing / this.viewTilt * 0.707) + 5;
-        const playerX = this.player.x;
-        const playerY = this.player.y;
+        const spacing = 130; 
+        const limit = Math.ceil((Math.max(this.width, this.height)/this.camera.zoom)/spacing) + 4;
+        const px = this.player.x; const py = this.player.y;
+        
+        const startX = Math.floor(px/spacing) - limit;
+        const endX = startX + limit*2;
+        const startY = Math.floor(py/spacing) - limit;
+        const endY = startY + limit*2;
 
-        const startX = Math.floor(playerX / spacing) - limit;
-        const endX = startX + limit * 2;
-        const startY = Math.floor(playerY / spacing) - limit;
-        const endY = startY + limit * 2;
+        this.ctx.lineWidth = 1.5;
+        this.ctx.globalCompositeOperation = 'lighter'; 
 
-        this.ctx.lineWidth = 1.2;
-        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)'; 
+        const getGridPoint = (ix, iy) => {
+            let x = ix * spacing;
+            let y = iy * spacing;
+            
+            // Diamond transform
+            const rx = (x - y) * 0.707;
+            const ry = (x + y) * 0.707;
+            x = rx; y = ry;
 
-        const distort = (x, y) => {
-            const dx = x - playerX;
-            const dy = y - playerY;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const pullRadius = 500;
-            if (dist < pullRadius) {
-                const strength = (1 - dist/pullRadius) * 80;
-                const angle = Math.atan2(dy, dx);
-                return {
-                    x: x - Math.cos(angle) * strength,
-                    y: y - Math.sin(angle) * strength
-                };
-            }
-            return {x, y};
+            let ox = x, oy = y;
+            let totalIntensity = 0;
+
+            const entities = [this.player, ...this.rivals];
+            entities.forEach(e => {
+                const dx = x - e.x; const dy = y - e.y;
+                if (Math.abs(dx) < 600 && Math.abs(dy) < 600) {
+                    const distSq = dx*dx + dy*dy;
+                    // Lensing Effect (Gaussian Pull)
+                    if(distSq < 360000) { 
+                        const dist = Math.sqrt(distSq);
+                        // No twisting, just radial pull
+                        const t = Math.exp(-(distSq)/(2*(200)**2)); 
+                        const force = t * 80; 
+                        const angle = Math.atan2(dy, dx);
+                        ox -= Math.cos(angle) * force;
+                        oy -= Math.sin(angle) * force;
+                        totalIntensity += t;
+                    }
+                }
+            });
+
+            // Ripple Effect (Air Wave)
+            this.shockwaves.forEach(sw => {
+                const dx = x - sw.x; const dy = y - sw.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const width = 150;
+                if (Math.abs(dist - sw.r) < width) {
+                    const t = 1 - Math.abs(dist - sw.r)/width;
+                    const wave = Math.sin(dist * 0.05 - sw.r * 0.1) * 30 * sw.alpha * sw.intensity;
+                    const angle = Math.atan2(dy, dx);
+                    ox += Math.cos(angle) * wave;
+                    oy += Math.sin(angle) * wave;
+                    totalIntensity += t * sw.intensity;
+                }
+            });
+
+            return {x: ox, y: oy, i: Math.min(totalIntensity, 2.0)};
         };
 
-        for (let i = startX; i <= endX; i++) {
-            for (let j = startY; j <= endY; j++) {
-                const p1 = {x: i*spacing, y: j*spacing};
-                
-                const rot = (p) => {
-                    const r = 0.707; 
-                    return { x: (p.x - p.y) * r, y: (p.x + p.y) * r };
-                };
-
-                const rp1 = rot(p1);
-                const dp1 = distort(rp1.x, rp1.y);
-
-                const pRight = {x: (i+1)*spacing, y: j*spacing};
-                const rpRight = rot(pRight);
-                const dpRight = distort(rpRight.x, rpRight.y);
-                
-                const pDown = {x: i*spacing, y: (j+1)*spacing};
-                const rpDown = rot(pDown);
-                const dpDown = distort(rpDown.x, rpDown.y);
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(dp1.x, dp1.y);
-                this.ctx.lineTo(dpRight.x, dpRight.y);
-                this.ctx.stroke();
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(dp1.x, dp1.y);
-                this.ctx.lineTo(dpDown.x, dpDown.y);
-                this.ctx.stroke();
+        for(let i=startX; i<=endX; i++) {
+            for(let j=startY; j<=endY; j++) {
+                const p = getGridPoint(i, j);
+                if (i < endX) {
+                    const pR = getGridPoint(i+1, j);
+                    this.drawGridLine(p, pR);
+                }
+                if (j < endY) {
+                    const pD = getGridPoint(i, j+1);
+                    this.drawGridLine(p, pD);
+                }
             }
         }
+        
+        this.ctx.shadowBlur = 0;
+        this.ctx.globalCompositeOperation = 'source-over';
+    }
+
+    drawGridLine(p1, p2) {
+        const avgI = (p1.i + p2.i) / 2;
+        const r = Math.floor(0 + avgI * 200);
+        const g = Math.floor(240 + avgI * 15); 
+        const b = 255;
+        const a = 0.15 + avgI * 0.6;
+        
+        this.ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
+        this.ctx.lineWidth = 1.2 + avgI * 2; 
+        this.ctx.shadowBlur = avgI * 15;
+        this.ctx.shadowColor = `rgba(${r},${g},${b},${a})`;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(p1.x, p1.y);
+        this.ctx.lineTo(p2.x, p2.y);
+        this.ctx.stroke();
     }
 
     drawSonar() {
         this.ctx.save();
         this.ctx.scale(1, 1/this.viewTilt);
-        
-        this.sonarPulses.forEach((p, idx) => {
-            p.r += 12;
-            p.alpha -= 0.02;
-            if(p.alpha <= 0) { this.sonarPulses.splice(idx, 1); return; }
+        this.ctx.globalCompositeOperation = 'lighter';
 
-            this.ctx.strokeStyle = `rgba(0, 255, 255, ${p.alpha * 0.4})`;
+        for(let i=this.sonarPulses.length-1; i>=0; i--) {
+            const p = this.sonarPulses[i];
+            p.r += 12; p.alpha -= 0.015;
+            if(p.alpha <= 0) { this.sonarPulses.splice(i, 1); continue; }
+
+            this.ctx.strokeStyle = `rgba(0, 255, 255, ${p.alpha * 0.3})`;
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
             this.ctx.stroke();
 
             const checkEcho = (entity, color) => {
-                const dx = entity.x - p.x;
-                const dy = entity.y - p.y;
+                const dx = entity.x - p.x; const dy = entity.y - p.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (Math.abs(dist - p.r) < 20 && p.alpha > 0.1) {
-                    this.ctx.beginPath();
                     this.ctx.strokeStyle = color;
                     this.ctx.lineWidth = 3;
+                    this.ctx.shadowBlur = 15; this.ctx.shadowColor = color;
                     const angle = Math.atan2(dy, dx);
-                    this.ctx.arc(entity.x, entity.y, entity.size ? entity.size + 15 : 30, angle - 0.6, angle + 0.6);
+                    this.ctx.beginPath();
+                    this.ctx.arc(entity.x, entity.y, entity.radius+10, angle-0.6, angle+0.6);
                     this.ctx.stroke();
+                    this.ctx.shadowBlur = 0;
                 }
             };
-            this.cubes.forEach(c => checkEcho(c, 'rgba(0, 255, 255, 0.6)'));
-            this.rivals.forEach(r => checkEcho(r, 'rgba(255, 50, 50, 0.6)'));
-        });
-        
+            this.cubes.forEach(c => checkEcho(c, 'rgba(0, 255, 255, 0.8)'));
+            this.rivals.forEach(r => checkEcho(r, 'rgba(255, 50, 50, 0.8)'));
+        }
         this.ctx.restore();
-    }
-    
-    drawTail(entity) {
-        if (entity.tail.length === 0) return;
-
-        this.ctx.globalAlpha = 0.5; // Semi-transparent hose
-        this.ctx.shadowBlur = 15;
-        
-        // Draw each segment using the assigned coordinates
-        entity.tail.forEach((seg, index) => {
-            // Check if coordinates are valid before drawing
-            if (seg.x === undefined || seg.y === undefined) return;
-
-            const alpha = 0.5 * (1 - index / entity.tail.length);
-            this.ctx.globalAlpha = alpha;
-            this.ctx.shadowColor = seg.color || entity.color;
-            this.ctx.fillStyle = seg.color || entity.color;
-            
-            const radius = this.TAIL_POINT_SIZE;
-            this.ctx.beginPath();
-            this.ctx.arc(seg.x, seg.y, radius, 0, Math.PI * 2);
-            this.ctx.fill();
-        });
-
-        this.ctx.globalAlpha = 1.0;
-        this.ctx.shadowBlur = 0;
+        this.ctx.globalCompositeOperation = 'source-over';
     }
 
-    drawRivals() {
-        this.rivals.forEach(r => {
-            // Draw tail first
-            this.ctx.save();
-            this.ctx.scale(1, 1/this.viewTilt);
-            this.drawTail(r);
-            this.ctx.restore();
-
-            this.ctx.save();
-            this.ctx.translate(r.x, r.y);
-            this.ctx.scale(1, 1/this.viewTilt);
-
-            // Shadow
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.beginPath();
-            this.ctx.ellipse(0, 20, 15, 8, 0, 0, Math.PI*2);
-            this.ctx.fill();
-
-            this.ctx.globalAlpha = 0.85; 
-            this.ctx.fillStyle = r.color;
-            this.ctx.shadowBlur = 15; this.ctx.shadowColor = r.color;
-            this.ctx.beginPath();
-            
-            if (r.state === 'RESONANCE') {
-                const shake = (Math.random()-0.5)*5;
-                this.ctx.arc(shake, shake, r.radius, 0, Math.PI*2);
-            } else {
-                this.ctx.arc(0, 0, r.radius, 0, Math.PI*2);
-            }
-            this.ctx.fill();
-            
-            this.ctx.globalAlpha = 1.0;
-            this.ctx.fillStyle = '#fff';
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, 5, 0, Math.PI*2);
-            this.ctx.fill();
-            this.ctx.restore();
-        });
-    }
-
-    drawPlayer() {
-        // Draw tail first
+    drawShockwaves() {
         this.ctx.save();
         this.ctx.scale(1, 1/this.viewTilt);
-        this.drawTail(this.player);
-        this.ctx.restore();
-
-        this.ctx.save();
-        this.ctx.translate(this.player.x, this.player.y);
-        this.ctx.scale(1, 1/this.viewTilt);
-
-        // Shadow
-        this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        this.ctx.beginPath();
-        this.ctx.ellipse(0, 20, 15, 8, 0, 0, Math.PI*2);
-        this.ctx.fill();
-
-        this.ctx.globalAlpha = 0.85; 
-        this.ctx.fillStyle = this.player.state === 'RESONANCE' ? '#ffaa00' : '#fff';
-        this.ctx.shadowBlur = this.player.aura > 0 ? 40 : 10;
-        this.ctx.shadowColor = this.player.state === 'RESONANCE' ? '#ffaa00' : '#00e5ff';
-        
-        const shakeX = this.player.state === 'RESONANCE' ? (Math.random()-0.5)*5 : 0;
-        const shakeY = this.player.state === 'RESONANCE' ? (Math.random()-0.5)*5 : 0;
-
-        this.ctx.beginPath();
-        this.ctx.arc(shakeX, shakeY, this.player.radius, 0, Math.PI*2);
-        this.ctx.fill();
-        
-        this.ctx.globalAlpha = 1.0;
-        if (this.player.aura > 0) {
-            this.ctx.strokeStyle = `rgba(0, 229, 255, ${this.player.aura/100})`;
-            this.ctx.lineWidth = 2;
+        this.ctx.globalCompositeOperation = 'lighter';
+        for(let i=this.shockwaves.length-1; i>=0; i--) {
+            const sw = this.shockwaves[i];
+            sw.r += 20; sw.alpha -= 0.04;
+            if(sw.alpha <= 0) { this.shockwaves.splice(i, 1); continue; }
+            this.ctx.lineWidth = 10 * sw.intensity;
+            this.ctx.strokeStyle = `rgba(255, 255, 255, ${sw.alpha})`;
             this.ctx.beginPath();
-            this.ctx.arc(0, 0, this.player.radius + 5 + Math.sin(Date.now()/100)*2, 0, Math.PI*2);
+            this.ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI*2);
             this.ctx.stroke();
         }
         this.ctx.restore();
+        this.ctx.globalCompositeOperation = 'source-over';
+    }
+
+    drawParticles() {
+        this.ctx.save();
+        this.ctx.scale(1, 1/this.viewTilt);
+        this.ctx.globalCompositeOperation = 'lighter';
+        this.particles.forEach(p => {
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life / 60;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            this.ctx.fill();
+        });
+        this.ctx.restore();
+        this.ctx.globalCompositeOperation = 'source-over';
     }
 
     drawEntities() {
-        this.cubes.forEach(cube => {
+        this.ctx.globalCompositeOperation = 'lighter';
+        this.cubes.forEach(c => {
             this.ctx.save();
-            this.ctx.translate(cube.x, cube.y);
+            this.ctx.translate(c.x, c.y);
+            this.ctx.scale(1, 1/this.viewTilt);
+            this.ctx.shadowBlur = 25; this.ctx.shadowColor = c.color;
+            this.ctx.fillStyle = c.color;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, c.size, 0, Math.PI*2);
+            this.ctx.fill();
+            this.ctx.restore();
+        });
+        this.ctx.globalCompositeOperation = 'source-over';
+    }
+
+    drawRivals() { this.drawChar(this.rivals); }
+    drawPlayer() { this.drawChar([this.player]); }
+
+    drawChar(list) {
+        list.forEach(c => {
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'lighter';
+            
+            // Tail (Serpent Style)
+            if(c.tail.length > 0) {
+                const total = c.tail.length;
+                c.tail.forEach((seg, i) => {
+                    if(seg.x===undefined) return;
+                    this.ctx.save();
+                    this.ctx.translate(seg.x, seg.y);
+                    this.ctx.scale(1, 1/this.viewTilt);
+                    
+                    this.ctx.fillStyle = seg.color || c.color;
+                    this.ctx.globalAlpha = 0.6 * (1 - i/total);
+                    this.ctx.shadowBlur = 15; this.ctx.shadowColor = this.ctx.fillStyle;
+                    
+                    // Subtle growth based on index (closer to head = bigger?) 
+                    // or total eaten? User said "eats more -> slightly bigger".
+                    // Let's base it on total length + slight taper
+                    const sizeBase = 8 + Math.min(total/10, 4); // Max +4 size
+                    const taper = 1 - (i/total)*0.5; // Taper end
+                    const radius = sizeBase * taper;
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, radius, 0, Math.PI*2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+            }
+            this.ctx.restore();
+
+            this.ctx.save();
+            this.ctx.translate(c.x, c.y);
             this.ctx.scale(1, 1/this.viewTilt);
             
-            this.ctx.shadowBlur = 30; 
-            this.ctx.shadowColor = cube.color;
-            this.ctx.fillStyle = cube.color;
+            this.ctx.globalAlpha = 0.9;
+            this.ctx.shadowBlur = 40; this.ctx.shadowColor = c.color;
+            this.ctx.fillStyle = c.state==='RESONANCE' ? '#fff' : c.color;
             
             this.ctx.beginPath();
-            this.ctx.arc(0, 0, cube.size/2, 0, Math.PI*2);
+            this.ctx.arc(0, 0, c.radius, 0, Math.PI*2);
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = '#fff';
+            this.ctx.shadowBlur = 0;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 6, 0, Math.PI*2);
             this.ctx.fill();
 
-            this.ctx.shadowBlur = 0; 
-            this.ctx.strokeStyle = '#fff';
-            this.ctx.lineWidth = 1;
-            const s = cube.size;
-            this.ctx.rotate(cube.angle || 0);
-            this.ctx.strokeRect(-s/2, -s/2, s, s);
-            this.ctx.rotate(-(cube.angle||0)*2);
-            this.ctx.strokeRect(-s/2, -s/2, s, s);
-
+            if(c.aura > 0) {
+                this.ctx.strokeStyle = `rgba(0,255,255,${c.aura/200})`;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, c.radius+8, 0, Math.PI*2);
+                this.ctx.stroke();
+            }
             this.ctx.restore();
         });
     }
 
-    drawEffects() {
-        this.shockwaves.forEach((sw, i) => {
-            this.ctx.strokeStyle = `rgba(255, 255, 255, ${sw.alpha})`;
-            this.ctx.lineWidth = 2 + (1-sw.alpha)*10;
-            this.ctx.beginPath();
-            this.ctx.ellipse(sw.x, sw.y, sw.r, sw.r*this.viewTilt, 0, 0, Math.PI*2); 
-            this.ctx.stroke();
-            sw.r += 12; sw.alpha -= 0.03;
-            if(sw.alpha<=0) this.shockwaves.splice(i,1);
-        });
-    }
-
-    // --- Helpers ---
-    spawnShockwave(x,y,maxR) { this.shockwaves.push({x,y,r:10, maxR, alpha:1}); }
-    addWP(n) { if(this.wp<this.maxWp) this.wp = Math.min(this.wp+n, this.maxWp); else { const b=document.getElementById('wp-bar'); b.classList.add('warning'); setTimeout(()=>b.classList.remove('warning'),500); } }
-    showNotification(t) { const el=document.getElementById('notification'); el.innerText=t; el.style.opacity=1; clearTimeout(this.nt); this.nt=setTimeout(()=>el.style.opacity=0, 2000); }
-    spawnCubeNearPlayer() { 
-        const angle = Math.random()*Math.PI*2; const dist = 400 + Math.random()*200;
-        this.cubes.push({ x: this.player.x+Math.cos(angle)*dist, y: this.player.y+Math.sin(angle)*dist, size:6, color:'#00ffff', angle:Math.random() });
+    spawnTrailCube(x, y) {
+        this.cubes.push({ x, y, size: 5, color: '#ffff00', angle:0, vx:0, vy:0 });
     }
     spawnCubeRandomly() {
-        this.cubes.push({ x: (Math.random()-0.5)*3000, y: (Math.random()-0.5)*3000, size:6, color:'#00ffff', angle:Math.random() });
+        this.cubes.push({ x: (Math.random()-0.5)*3000, y: (Math.random()-0.5)*3000, size:6, color:'#00ffff', angle:0, vx:0, vy:0 });
     }
-    spawnTrailCube(x, y) {
-        this.cubes.push({ 
-            x: x + (Math.random()-0.5)*10, y: y + (Math.random()-0.5)*10,
-            size: 4, color: '#ffff00', angle: Math.random() * Math.PI, vx: 0, vy: 0 
-        });
+    spawnCubeNearPlayer() { 
+        const a = Math.random()*Math.PI*2; const d = 500 + Math.random()*200;
+        this.cubes.push({ x: this.player.x+Math.cos(a)*d, y: this.player.y+Math.sin(a)*d, size:6, color:'#00ffff', angle:0, vx:0, vy:0 });
     }
-    resetCube(c) {
-        // Respawn collected cube
-        const angle = Math.random()*Math.PI*2; const dist = 1000 + Math.random()*500;
-        c.x = this.player.x+Math.cos(angle)*dist; c.y = this.player.y+Math.sin(angle)*dist;
-        c.vx = 0; c.vy = 0;
-        c.color = '#00ffff';
-        c.size = 6;
+    addWP(n) { if(this.wp<this.maxWp) this.wp = Math.min(this.wp+n, this.maxWp); }
+    showNotification(t) { 
+        const el = document.getElementById('notification');
+        el.innerText = t; el.style.opacity = 1;
+        clearTimeout(this.nt); this.nt = setTimeout(()=>el.style.opacity=0, 2000);
     }
-    refillAura() { if(this.wp>=1){this.wp--;this.player.aura=this.player.maxAura;this.spawnShockwave(this.player.x,this.player.y,100);this.playSound('pickup');} else this.showNotification("NO WP"); }
+    refillAura() { if(this.wp>=1){this.wp--;this.player.aura=this.player.maxAura;this.spawnShockwave(this.player.x,this.player.y,300);this.playSound('pickup');} }
     resetGame() { 
-        this.wp=0; this.player.x=0; this.player.y=0; this.player.apStreak = 0; this.player.tail = []; this.player.path = [];
-        this.cubes=[]; for(let i=0;i<40;i++)this.spawnCubeRandomly(); 
-        this.rivals.forEach(r => { 
-            r.x=(Math.random()-0.5)*2500; 
-            r.y=(Math.random()-0.5)*2500; 
-            r.tail=[]; 
-            r.path=[];
-            r.color = `hsl(${Math.random()*360}, 70%, 50%)`; 
-        }); 
+        this.wp=0; this.player.x=0; this.player.y=0; this.player.tail=[]; this.player.path=[];
+        this.cubes=[]; for(let i=0;i<50;i++)this.spawnCubeRandomly(); 
+        this.rivals.forEach(r => { r.x=(Math.random()-0.5)*2500; r.y=(Math.random()-0.5)*2500; r.tail=[]; r.path=[]; });
         this.showNotification("WORLD RESET"); 
     }
     updateUI() {
-        const apBonus = Math.min(this.player.apStreak * 0.001 * 100, 5).toFixed(1);
-        const streakEl = document.getElementById('ap-streak-row');
-
         document.getElementById('wp-val').innerText = Math.floor(this.wp);
         document.getElementById('aura-text').innerText = Math.floor(this.player.aura) + '%';
         document.getElementById('stamina-text').innerText = Math.floor(this.player.stamina) + '%';
         document.getElementById('ap-streak-count').innerText = this.player.apStreak;
-        document.getElementById('ap-streak-bonus').innerText = apBonus;
+        document.getElementById('ap-streak-bonus').innerText = (Math.min(this.player.apStreak*0.001,0.05)*100).toFixed(1);
         
-        const speed = Math.sqrt(this.player.vx**2 + this.player.vy**2);
-        const streakBonusValue = Math.min(this.player.apStreak * 0.001, 0.05); 
-        const apRatePerSecond = speed > 0.1 
-            ? (speed * 0.02 * this.devSettings.apGain * (1 + streakBonusValue)) * 60
-            : 0;
-
-        document.getElementById('ap-rate-val').innerText = apRatePerSecond.toFixed(2);
-        document.getElementById('cp-gain-val').innerText = this.devSettings.cpGain;
-
-        streakEl.style.opacity = this.player.apStreak > 0 ? 1 : 0;
-        streakEl.style.color = apBonus > 0 ? '#64dd17' : '#888';
-
         document.getElementById('wp-bar').style.width = (this.wp/this.maxWp)*100 + '%';
         document.getElementById('aura-bar').style.width = this.player.aura + '%';
         document.getElementById('stamina-bar').style.width = this.player.stamina + '%';
+        
+        const speed = Math.sqrt(this.player.vx**2 + this.player.vy**2);
+        document.getElementById('ap-rate-val').innerText = (speed*0.03*60).toFixed(2);
     }
 }
 
