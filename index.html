@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Miniroom: Reboot v2.4 (Optimization & New Points)</title>
+    <title>Miniroom: Reboot v2.5 (Fix AI & FX Target)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -32,8 +32,8 @@
         .status-panel {
             pointer-events: auto; background: rgba(5, 10, 20, 0.9);
             border: 1px solid rgba(0, 229, 255, 0.3); border-left: 4px solid #00e5ff;
-            padding: 20px; padding-bottom: 40px; /* Space for settings button */
-            border-radius: 4px; min-width: 280px;
+            padding: 20px; padding-bottom: 40px;
+            border-radius: 4px; min-width: 260px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             font-family: 'Orbitron', sans-serif;
             position: relative;
@@ -69,15 +69,17 @@
         }
         #minimapCanvas { width: 100%; height: 100%; display: block; }
 
-        /* Stats & Bars */
+        /* Stats */
         .stat-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
         .label { color: #88aadd; font-size: 10px; font-weight: 500; text-transform: uppercase; }
         .value { color: #fff; font-weight: 700; font-size: 13px; text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
         .bar-container { width: 100%; height: 4px; background: rgba(0,0,0,0.6); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
         .bar-fill { height: 100%; width: 0%; transition: width 0.1s; }
         .wp-fill { background: linear-gradient(90deg, #aa00ff, #d500f9); }
-        .ap-fill { background: linear-gradient(90deg, #00e5ff, #0091ea); } /* AP Bar */
-        .cp-fill { background: linear-gradient(90deg, #ff3d00, #dd2c00); } /* CP Bar */
+        .ap-fill { background: linear-gradient(90deg, #00e5ff, #0091ea); }
+        .cp-fill { background: linear-gradient(90deg, #ff3d00, #dd2c00); }
+        .aura-fill { background: linear-gradient(90deg, #ff6d00, #ffea00); }
+        .stamina-fill { background: linear-gradient(90deg, #00c853, #64dd17); }
 
         .skill-status { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
         .status-icon { font-size: 16px; opacity: 0.3; transition: opacity 0.3s; position: relative; }
@@ -162,27 +164,33 @@
     <div id="ui-layer">
         <div class="hud-left-container">
             <div class="status-panel" id="status-panel" style="opacity: 0;">
-                <!-- Main WP -->
-                <div class="stat-row"><span class="label">WP (World Point)</span><span class="value"><span id="wp-val">0</span></span></div>
+                <div class="stat-row"><span class="label">WP</span><span class="value"><span id="wp-val">0</span>/100</span></div>
                 <div class="bar-container"><div id="wp-bar" class="bar-fill wp-fill"></div></div>
                 
-                <!-- Sub Points -->
-                <div class="stat-row" style="margin-top: 5px;"><span class="label">AP (Activity)</span><span class="value"><span id="ap-val">0.0</span></span></div>
-                <div class="bar-container" style="height:2px; margin-bottom:5px;"><div id="ap-bar" class="bar-fill ap-fill"></div></div>
+                <div class="stat-row" style="margin-top:5px;"><span class="label">AP</span><span class="value"><span id="ap-val">0.0</span></span></div>
+                <div class="bar-container" style="height:2px;"><div id="ap-bar" class="bar-fill ap-fill"></div></div>
                 
-                <div class="stat-row"><span class="label">CP (Contact)</span><span class="value"><span id="cp-val">0.0</span></span></div>
-                <div class="bar-container" style="height:2px; margin-bottom:5px;"><div id="cp-bar" class="bar-fill cp-fill"></div></div>
+                <div class="stat-row"><span class="label">CP</span><span class="value"><span id="cp-val">0.0</span></span></div>
+                <div class="bar-container" style="height:2px;"><div id="cp-bar" class="bar-fill cp-fill"></div></div>
 
-                <!-- Skill Status -->
+                <div class="stat-row" style="margin-top:5px;"><span class="label">Aura</span><span class="value" id="aura-text">100%</span></div>
+                <div class="bar-container"><div id="aura-bar" class="bar-fill aura-fill"></div></div>
+                
+                <div class="stat-row"><span class="label">Stamina</span><span class="value" id="stamina-text">100%</span></div>
+                <div class="bar-container"><div id="stamina-bar" class="bar-fill stamina-fill"></div></div>
+
+                <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                    <div class="stat-row"><span class="label">AP Rate</span><span class="value"><span id="ap-rate-val">0.0</span>/s</span></div>
+                    <div id="ap-streak-row"><span class="label" style="color: #64dd17;">Streak</span><span>x<span id="ap-streak-count">0</span></span></div>
+                </div>
+
                 <div class="skill-status">
                     <div id="icon-invincible" class="status-icon" style="color:#00e5ff;">🛡</div>
                     <div id="icon-digest-lock" class="status-icon" style="color:#ff3d00;">⛔ <span id="digest-lock-cd" class="status-cd"></span></div>
                 </div>
-                <!-- Settings Toggle Button at Bottom Right of Panel -->
                 <div id="settings-toggle" onclick="app.toggleSettings()">⚙️</div>
             </div>
 
-            <!-- Settings Panel (Slides from Left) -->
             <div id="settings-panel">
                 <h3>System Settings</h3>
                 <div class="setting-group">
@@ -190,6 +198,14 @@
                     <input type="range" id="sl-volume" min="0" max="100" value="100">
                 </div>
                 <div class="setting-group"><button onclick="app.toggleMute()" id="mute-btn" class="action-btn">🔊 Sound On</button></div>
+                <div class="setting-group">
+                    <label>AP Gain <span id="val-ap-gain" style="float:right">1.0</span></label>
+                    <input type="range" id="sl-ap-gain" min="0.1" max="5.0" step="0.1" value="1.0">
+                </div>
+                <div class="setting-group">
+                    <label>CP Reward <span id="val-cp-gain" style="float:right">10</span></label>
+                    <input type="range" id="sl-cp-gain" min="1" max="50" step="1" value="10">
+                </div>
                 <div class="setting-group"><button onclick="app.toggleMobileControls()" id="mob-ctrl-btn" class="action-btn">📱 Mobile Controls</button></div>
                 <div style="margin-top:auto;"><button onclick="app.resetGame()" class="action-btn danger">⚠ Reset</button></div>
             </div>
@@ -200,7 +216,7 @@
         </div>
 
         <div id="notification"></div>
-        <div class="key-guide">[WASD/Mouse] Move &nbsp; [Space/.] Digest &nbsp; [Shift] Drift</div>
+        <div class="key-guide">[WASD] Move &nbsp; [Space/.] Digest &nbsp; [Shift] Drift</div>
 
         <div id="digest-btn" onclick="app.activateDigestion()">
             <span>♻</span><span id="digest-timer">READY</span>
@@ -220,21 +236,11 @@
 
     <div id="opening-overlay">
         <h1 class="title-main">MINIROOM</h1>
-        <h2 class="title-sub">REBOOT: GRAVITY v2.4</h2>
+        <h2 class="title-sub">REBOOT: GRAVITY v2.5</h2>
         <button class="start-btn" onclick="app.startSequence()">INITIALIZE</button>
     </div>
 
 <script>
-/**
- * MINIROOM REBOOT v2.4 (Optimization & New Points)
- * - OPTIMIZATION: Grid spacing increased, culling, reduced math.
- * - MECHANIC: AP (0.001/s move), CP (0.005/s turn/hit), WP = (AP+CP)/100.
- * - MECHANIC: Delayed Spawn (3s) only at max speed (30% chance).
- * - MECHANIC: Digestion Cooldown 180s.
- * - MAP: Size 7500. Minimap uses dots.
- * - AI: Improved movement logic.
- */
-
 class MiniroomApp {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -257,27 +263,20 @@ class MiniroomApp {
         this.player.isPlayer = true;
 
         this.rivals = [];
-        this.wp = 0; 
-        this.ap = 0; 
-        this.cp = 0;
+        this.wp = 0; this.ap = 0; this.cp = 0; this.maxWp = 100;
         
-        // Stats
-        this.stats = { 
-            baseSpeed: 0.27, maxSpeedBase: 10.8, 
-            vision: 1.0, magnetRange: 200 
-        };
-
-        // Arrays for entities
+        this.stats = { baseSpeed: 0.27, maxSpeedBase: 10.8, vision: 1.0, magnetRange: 200 };
+        
+        // Limited Arrays for Optimization
         this.particles = [];
         this.cubes = []; 
         this.delayedSpawns = []; 
         this.shockwaves = [];
         this.sonarPulses = [];
         
-        // Constants
         this.DIGESTION_RATE = 30;
         this.TAIL_SEGMENT_SPACING = 6;
-        this.DIGEST_COOLDOWN_TIME = 10800; // 180 sec
+        this.DIGEST_COOLDOWN_TIME = 10800; // 3 min
         this.DIGEST_ACTIVE_TIME = 300;     
         this.DIGEST_LOCK_TIME = 600;       
         this.GROWTH_THRESHOLD = 100;
@@ -294,6 +293,7 @@ class MiniroomApp {
         this.soundEnabled = true; this.sounds = {};
         this.flashIntensity = 0;
         this.volume = 1.0;
+        this.shakeStrength = 0;
         
         this.init();
     }
@@ -307,7 +307,7 @@ class MiniroomApp {
             growthBuffer: 0, invincibleTimer: 0, digestLockTimer: 0, 
             digestSkill: { cooldown: 0, activeTimer: 0 },
             moveTimer: 0, moveAngle: 0,
-            prevDirX: 0, prevDirY: 0 // For CP calc (turning)
+            prevDirX: 0, prevDirY: 0
         };
     }
 
@@ -336,7 +336,7 @@ class MiniroomApp {
         requestAnimationFrame(() => this.loop());
 
         for(let i=0; i<8; i++) this.spawnRival();
-        for(let i=0; i<400; i++) this.spawnCubeRandomly(); // Increased spawn
+        for(let i=0; i<400; i++) this.spawnCubeRandomly(); 
     }
 
     resize() {
@@ -347,7 +347,8 @@ class MiniroomApp {
     }
 
     bindSettings() {
-        document.getElementById('sl-volume').addEventListener('input', e => {
+        const v = document.getElementById('sl-volume');
+        if(v) v.addEventListener('input', e => {
             this.volume = e.target.value / 100;
             document.getElementById('val-volume').innerText = e.target.value + '%';
             this.setSoundVolumes();
@@ -391,7 +392,6 @@ class MiniroomApp {
     handleWheel(e) {
         if (this.state !== 'PLAY') return;
         e.preventDefault();
-        // Zoom Limit Halved (0.9 minimum, means closer view)
         this.camera.targetZoom = Math.max(0.9, Math.min(this.camera.targetZoom - e.deltaY * 0.001, 3.0));
     }
 
@@ -402,8 +402,8 @@ class MiniroomApp {
         setTimeout(() => overlay.style.display = 'none', 800);
         
         this.state = 'PLAY';
-        document.getElementById('status-panel').style.opacity=1;
-        document.getElementById('aura-refill-btn').style.opacity=1;
+        const sp = document.getElementById('status-panel'); if(sp) sp.style.opacity = 1;
+        const ab = document.getElementById('aura-refill-btn'); if(ab) ab.style.opacity = 1;
         this.spawnShockwave(0,0,800, 1.5);
         this.showNotification("SYSTEM ONLINE");
     }
@@ -418,6 +418,7 @@ class MiniroomApp {
         this.ctx.save();
         this.ctx.translate(this.width/2, this.height/2);
         
+        // Shake only if player involved
         if (this.shakeStrength > 0) {
             const dx = (Math.random()-0.5)*this.shakeStrength; const dy = (Math.random()-0.5)*this.shakeStrength;
             this.ctx.translate(dx, dy);
@@ -432,7 +433,7 @@ class MiniroomApp {
         this.ctx.translate(-this.player.x, -this.player.y);
 
         this.drawWorldBounds(); 
-        this.drawGravityGrid(); // Optimized
+        this.drawGravityGrid(); 
         this.drawEntities();
         this.drawRivals();
         this.drawPlayer();
@@ -442,6 +443,7 @@ class MiniroomApp {
 
         this.ctx.restore();
 
+        // Flash only if player involved
         if(this.flashIntensity > 0) {
             this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashIntensity})`;
             this.ctx.fillRect(0,0,this.width,this.height);
@@ -462,11 +464,8 @@ class MiniroomApp {
         this.updateUI();
         this.updateDelayedSpawns();
 
-        // Calculate WP
         this.wp = (this.ap + this.cp) / 100;
 
-        // Increased Natural Spawn Rate (+50% from prev)
-        // 400 total population limit, spawn faster
         if(this.frameCount % 5 === 0 && this.cubes.length < 400) this.spawnCubeRandomly();
     }
 
@@ -477,7 +476,6 @@ class MiniroomApp {
         const currentAccel = this.physics.accel * (1 - tailPenalty * 0.5);
         let isSprint = false;
 
-        // Input & AI
         if (isPlayer) {
             let dirX = 0, dirY = 0;
             if (this.keys['ArrowUp'] || this.keys['w']) dirY -= 1;
@@ -503,32 +501,29 @@ class MiniroomApp {
                 e.stamina = Math.min(e.maxStamina, e.stamina + 0.2);
             }
         } else {
-            // NPC AI Improved
-            // 1. Check bounds first
-            const distFromCenter = Math.sqrt(e.x*e.x + e.y*e.y);
-            if(distFromCenter > this.worldRadius - 500) {
-                // Force return to center
-                const angleToCenter = Math.atan2(-e.y, -e.x);
-                ax = Math.cos(angleToCenter) * currentAccel * 1.5;
-                ay = Math.sin(angleToCenter) * currentAccel * 1.5;
+            // FIX AI: Aggressive seek or force move
+            let target = null;
+            let minDist = 2000; // Increased seek range
+            for(let c of this.cubes) {
+                if(Math.abs(c.x-e.x)>2000 || Math.abs(c.y-e.y)>2000) continue;
+                const d = Math.sqrt((e.x-c.x)**2 + (e.y-c.y)**2);
+                if (d < minDist) { minDist = d; target = c; }
+            }
+            
+            if (target) {
+                const dx = target.x - e.x; const dy = target.y - e.y;
+                ax = (dx/minDist) * currentAccel * 1.0; 
+                ay = (dy/minDist) * currentAccel * 1.0;
             } else {
-                // 2. Seek Food
-                let target = null;
-                let minDist = 1200; // Look range
-                for(let c of this.cubes) {
-                    if (Math.abs(c.x-e.x) > 1200 || Math.abs(c.y-e.y) > 1200) continue; // Opt
-                    const d = Math.sqrt((e.x-c.x)**2 + (e.y-c.y)**2);
-                    if (d < minDist && c.value > 7) { minDist = d; target = c; }
-                }
-                if (target) {
-                    const dx = target.x - e.x; const dy = target.y - e.y;
-                    ax = (dx/minDist) * currentAccel * 0.9; ay = (dy/minDist) * currentAccel * 0.9;
+                // If no target, move towards center strongly
+                const distFromCenter = Math.sqrt(e.x*e.x + e.y*e.y);
+                if(distFromCenter > 1000) {
+                    const angle = Math.atan2(-e.y, -e.x);
+                    ax = Math.cos(angle) * currentAccel * 0.5;
+                    ay = Math.sin(angle) * currentAccel * 0.5;
                 } else {
-                    // Wander update
-                    if (e.moveTimer <= 0) { 
-                        e.moveTimer = Math.random()*120+60; 
-                        e.moveAngle = Math.random()*Math.PI*2; 
-                    }
+                    // Random wander
+                    if (e.moveTimer <= 0) { e.moveTimer = Math.random()*60+30; e.moveAngle = Math.random()*Math.PI*2; }
                     e.moveTimer--;
                     ax = Math.cos(e.moveAngle)*currentAccel*0.5; ay = Math.sin(e.moveAngle)*currentAccel*0.5;
                 }
@@ -543,42 +538,31 @@ class MiniroomApp {
         const limit = (isSprint) ? currentMaxSpeed * 1.5 : currentMaxSpeed;
         if(spd > limit) { e.vx *= limit/spd; e.vy *= limit/spd; }
 
-        // --- Calculate Points (Player Only) ---
         if (isPlayer) {
-            // AP: Movement 0.001 per unit (roughly speed dependent)
             if (spd > 0.1) this.ap += 0.001; 
-
-            // CP: Turning at high speed
             if (spd > currentMaxSpeed * 0.8) {
-                // Dot product to check turn angle
                 const currDirX = e.vx/spd; const currDirY = e.vy/spd;
                 const dot = currDirX * e.prevDirX + currDirY * e.prevDirY;
-                // If dot < 0.9 (turning significantly)
-                if (dot < 0.9) {
-                    this.cp += 0.005;
-                }
+                if (dot < 0.9) this.cp += 0.005;
                 e.prevDirX = currDirX; e.prevDirY = currDirY;
             }
         }
 
         e.x += e.vx; e.y += e.vy;
 
-        // --- Trail Logic ---
-        // Condition: Speed > 90% Max & 30% chance
         const speedThreshold = limit * 0.9;
         if (spd > speedThreshold && this.frameCount % 20 === 0) {
             if (Math.random() < 0.3) {
-                this.addDelayedSpawn(e.x, e.y, 180); // 3 sec delay
+                this.addDelayedSpawn(e.x, e.y, 180);
             }
         }
 
-        // Boundary Check
         const distFromCenter = Math.sqrt(e.x*e.x + e.y*e.y);
         if (distFromCenter + e.radius > this.worldRadius) {
             const angle = Math.atan2(e.y, e.x);
             e.x = Math.cos(angle) * (this.worldRadius - e.radius);
             e.y = Math.sin(angle) * (this.worldRadius - e.radius);
-            e.vx *= -0.5; e.vy *= -0.5;
+            e.vx *= -0.8; e.vy *= -0.8; // Strong bounce
         }
 
         if(e.resonanceTimer > 0) e.resonanceTimer--;
@@ -607,7 +591,6 @@ class MiniroomApp {
             const ds = this.delayedSpawns[i];
             ds.delay--;
             if(ds.delay <= 0) {
-                // Spawn Effect
                 this.spawnCube(ds.x, ds.y, 'SMALL');
                 this.spawnParticles(ds.x, ds.y, 5, '#00ffff', 'spark');
                 this.delayedSpawns.splice(i, 1);
@@ -630,6 +613,7 @@ class MiniroomApp {
             const p1 = e.path[i]; const p2 = e.path[i+1];
             const d = Math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2);
             dist += d;
+            
             while(dist >= this.TAIL_SEGMENT_SPACING && segIdx < e.tail.length) {
                 const r = (dist - this.TAIL_SEGMENT_SPACING) / d;
                 e.tail[segIdx].x = p1.x - (p1.x-p2.x)*r;
@@ -652,13 +636,12 @@ class MiniroomApp {
         for(let i=0; i<this.rivals.length; i++) {
             for(let j=i+1; j<this.rivals.length; j++) {
                 this.checkCollisions(this.rivals[i], this.rivals[j]);
-                // Soft Separation
                 const dx = this.rivals[i].x - this.rivals[j].x;
                 const dy = this.rivals[i].y - this.rivals[j].y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist < 50) { 
                     const angle = Math.atan2(dy, dx);
-                    const push = 0.2;
+                    const push = 0.5;
                     this.rivals[i].vx += Math.cos(angle) * push;
                     this.rivals[i].vy += Math.sin(angle) * push;
                     this.rivals[j].vx -= Math.cos(angle) * push;
@@ -678,16 +661,23 @@ class MiniroomApp {
 
     resolveHeadCollision(a, b) {
         if(a.resonanceTimer > 0 || b.resonanceTimer > 0) return;
+        
+        const isPlayerInvolved = (a.isPlayer || b.isPlayer);
+        
         this.spawnShockwave((a.x+b.x)/2, (a.y+b.y)/2, 600, 2.0); 
-        this.flashIntensity = 0.5; this.shakeStrength = 30;
+        
+        if (isPlayerInvolved) {
+            this.flashIntensity = 0.5; 
+            this.shakeStrength = 30;
+            this.showNotification("RESONANCE!!");
+        }
+        
         a.resonanceTimer = 60; b.resonanceTimer = 60;
         const angle = Math.atan2(a.y - b.y, a.x - b.x); const force = 25;
         a.vx = Math.cos(angle)*force; a.vy = Math.sin(angle)*force;
         b.vx = -Math.cos(angle)*force; b.vy = -Math.sin(angle)*force;
         
-        // CP Gain on collision
-        if (a.isPlayer || b.isPlayer) this.cp += 0.005;
-
+        if (isPlayerInvolved) this.cp += 0.005;
         this.dropRandomTail(a); this.dropRandomTail(b);
     }
 
@@ -711,7 +701,13 @@ class MiniroomApp {
                 attacker.tail.push(...stolen);
                 attacker.invincibleTimer = 60; attacker.digestLockTimer = 600; 
                 this.spawnParticles(seg.x, seg.y, 30, '#fff', 'spark');
-                this.showNotification("TAIL STOLEN!");
+                
+                if (attacker.isPlayer || victim.isPlayer) {
+                    this.showNotification("TAIL STOLEN!");
+                    this.flashIntensity = 0.4;
+                    this.shakeStrength = 15;
+                }
+                
                 victim.vx *= 0.1; victim.vy *= 0.1;
                 return; 
             }
@@ -729,7 +725,6 @@ class MiniroomApp {
     updateCubes() {
         for(let i=this.cubes.length-1; i>=0; i--) {
             const c = this.cubes[i];
-            // Optimization: Skip physics if far
             if (Math.abs(c.x - this.player.x) > 1500 && Math.abs(c.y - this.player.y) > 1500) continue;
 
             const dx = this.player.x - c.x; const dy = this.player.y - c.y;
@@ -749,8 +744,9 @@ class MiniroomApp {
             e.growthBuffer -= this.GROWTH_THRESHOLD;
             e.tail.push({ color: c.color, x: e.x, y: e.y });
         }
-        // WP is calculated from AP/CP now, direct pickup doesn't give WP directly
-        // But maybe small bonus? No, user specified WP = AP+CP
+        if(e === this.player) {
+            // WP is calculated from AP/CP now, but visual feedback is nice
+        }
     }
 
     spawnCubeRandomly() {
@@ -767,7 +763,6 @@ class MiniroomApp {
     }
     spawnTrailCube(x, y) { this.spawnCube(x, y, 'SMALL'); }
     spawnParticles(x, y, count, color, type) {
-        // Limit particles for performance
         if (this.particles.length > 200) return; 
         for(let i=0; i<count; i++) {
             const a = Math.random()*Math.PI*2; const s = Math.random()*5+2;
@@ -784,7 +779,7 @@ class MiniroomApp {
     }
     
     spawnShockwave(x, y, maxR, intensity) {
-        if(this.shockwaves.length > 5) this.shockwaves.shift(); // Limit shockwaves
+        if(this.shockwaves.length > 5) this.shockwaves.shift(); 
         this.shockwaves.push({x, y, r:20, maxR, alpha:1, intensity});
     }
 
@@ -804,7 +799,7 @@ class MiniroomApp {
     }
 
     drawGravityGrid() {
-        const spacing = 200; // Optimized
+        const spacing = 200; 
         const limit = Math.ceil((Math.max(this.width, this.height)/this.camera.zoom)/spacing)+2;
         const px = this.player.x; const py = this.player.y;
         const sx = Math.floor(px/spacing)-limit; const ex = sx+limit*2;
@@ -819,7 +814,7 @@ class MiniroomApp {
             x = rx; y = ry;
             
             let ox = x, oy = y, inten = 0;
-            // Optimization: Box Check & only calculate dist for player (camera center)
+            // Optimization
             if (Math.abs(x - px) < 800 && Math.abs(y - py) < 800) {
                  const d2 = (x-px)**2 + (y-py)**2;
                  if (d2 < 250000) {
@@ -858,18 +853,15 @@ class MiniroomApp {
         const scale = (w/2 - 5) / this.worldRadius;
         mm.scale(scale, scale);
 
-        // Border
         mm.strokeStyle = '#333'; mm.lineWidth = 50;
         mm.beginPath(); mm.arc(0,0,this.worldRadius,0,Math.PI*2); mm.stroke();
 
-        // Player (Small dot)
         mm.fillStyle = '#00ffff';
-        mm.beginPath(); mm.arc(this.player.x, this.player.y, 80, 0, Math.PI*2); mm.fill();
+        mm.beginPath(); mm.arc(this.player.x, this.player.y, 150, 0, Math.PI*2); mm.fill();
 
-        // Rivals (Small dots)
         mm.fillStyle = '#ff0044';
         this.rivals.forEach(r => {
-            mm.beginPath(); mm.arc(r.x, r.y, 80, 0, Math.PI*2); mm.fill();
+            mm.beginPath(); mm.arc(r.x, r.y, 150, 0, Math.PI*2); mm.fill();
         });
 
         mm.restore();
@@ -892,7 +884,6 @@ class MiniroomApp {
     drawEntities() {
         this.ctx.globalCompositeOperation = 'lighter';
         this.cubes.forEach(c => {
-            // Strong culling
             if (Math.abs(c.x - this.player.x) > 1000 || Math.abs(c.y - this.player.y) > 1000) return;
             this.ctx.save(); this.ctx.translate(c.x, c.y); this.ctx.scale(1, 1/this.viewTilt);
             this.ctx.fillStyle = c.color; this.ctx.shadowBlur = 10; this.ctx.shadowColor = c.color;
@@ -906,7 +897,6 @@ class MiniroomApp {
     drawPlayer() { this.drawChar(this.player); }
 
     drawChar(e) {
-        // Culling
         if (Math.abs(e.x - this.player.x) > 1200 || Math.abs(e.y - this.player.y) > 1200) return;
 
         this.ctx.save();
@@ -984,6 +974,8 @@ class MiniroomApp {
 
         const auraText = document.getElementById('aura-text'); if(auraText) auraText.innerText = Math.floor(p.aura)+'%';
         const staminaText = document.getElementById('stamina-text'); if(staminaText) staminaText.innerText = Math.floor(p.stamina)+'%';
+        const streakCount = document.getElementById('ap-streak-count'); if(streakCount) streakCount.innerText = this.player.apStreak;
+        const streakBonus = document.getElementById('ap-streak-bonus'); if(streakBonus) streakBonus.innerText = (Math.min(this.player.apStreak*0.001,0.05)*100).toFixed(1);
         
         const wpBar = document.getElementById('wp-bar'); if(wpBar) wpBar.style.width = (this.wp/this.maxWp)*100+'%';
         const apBar = document.getElementById('ap-bar'); if(apBar) apBar.style.width = Math.min((this.ap/this.maxWp)*100, 100)+'%';
@@ -1021,6 +1013,13 @@ class MiniroomApp {
             dBtn.classList.remove('active', 'cooldown');
             dTimer.innerText = "READY";
         }
+        
+        const apRate = document.getElementById('ap-rate-val'); if(apRate) {
+            const speed = Math.sqrt(this.player.vx**2 + this.player.vy**2);
+            apRate.innerText = (speed*0.03*60).toFixed(2);
+        }
+        const cpEl = document.getElementById('cp-gain-val');
+        if(cpEl) cpEl.innerText = this.devSettings.cpGain;
     }
 }
 
