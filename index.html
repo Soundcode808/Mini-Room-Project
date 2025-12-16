@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Miniroom: Reboot v2.5 (Fix AI & FX Target)</title>
+    <title>Miniroom: Reboot v2.5.2 (Critical Fixes)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -236,7 +236,7 @@
 
     <div id="opening-overlay">
         <h1 class="title-main">MINIROOM</h1>
-        <h2 class="title-sub">REBOOT: GRAVITY v2.5</h2>
+        <h2 class="title-sub">REBOOT: GRAVITY v2.5.2</h2>
         <button class="start-btn" onclick="app.startSequence()">INITIALIZE</button>
     </div>
 
@@ -267,7 +267,6 @@ class MiniroomApp {
         
         this.stats = { baseSpeed: 0.27, maxSpeedBase: 10.8, vision: 1.0, magnetRange: 200 };
         
-        // Limited Arrays for Optimization
         this.particles = [];
         this.cubes = []; 
         this.delayedSpawns = []; 
@@ -346,13 +345,65 @@ class MiniroomApp {
         this.canvas.height = this.height;
     }
 
+    // Helper functions defined inside class to avoid 'not a function' error
+    showNotification(t) { 
+        const el = document.getElementById('notification'); 
+        if(!el) return;
+        el.innerText=t; el.style.opacity=1; 
+        clearTimeout(this.nt); 
+        this.nt=setTimeout(()=>el.style.opacity=0, 2000); 
+    }
+
+    addWP(n) { if(this.wp<this.maxWp) this.wp = Math.min(this.wp+n, this.maxWp); }
+    
+    refillAura() { 
+        if(this.wp>=1){
+            this.wp--;
+            this.player.aura=100;
+            this.spawnShockwave(this.player.x,this.player.y,300);
+            this.playSound('pickup');
+        } 
+    }
+
+    resetGame() { 
+        this.wp=0; this.ap=0; this.cp=0;
+        this.player.x=0; this.player.y=0; this.player.tail=[]; this.player.path=[];
+        this.cubes=[]; for(let i=0;i<400;i++)this.spawnCubeRandomly(); 
+        this.rivals.forEach(r => { r.x=(Math.random()-0.5)*2500; r.y=(Math.random()-0.5)*2500; r.tail=[]; });
+        this.showNotification("WORLD RESET"); 
+    }
+
+    toggleMute() { 
+        this.soundEnabled = !this.soundEnabled;
+        const btn = document.getElementById('mute-btn');
+        if(btn) btn.innerText = this.soundEnabled ? '🔊 Sound On' : '🔇 Muted';
+        if(this.sounds.bgm) this.sounds.bgm.muted = !this.soundEnabled;
+    }
+
+    toggleSettings() { 
+        const el = document.getElementById('settings-panel');
+        if(el) el.classList.toggle('active'); 
+    }
+    
+    toggleMobileControls() { 
+        const el = document.getElementById('mobile-controls');
+        if(el) el.classList.toggle('visible'); 
+    }
+
     bindSettings() {
         const v = document.getElementById('sl-volume');
         if(v) v.addEventListener('input', e => {
             this.volume = e.target.value / 100;
-            document.getElementById('val-volume').innerText = e.target.value + '%';
+            const vt = document.getElementById('val-volume');
+            if(vt) vt.innerText = e.target.value + '%';
             this.setSoundVolumes();
         });
+        
+        const ap = document.getElementById('sl-ap-gain');
+        if(ap) ap.addEventListener('input', e => this.devSettings.apGain = parseFloat(e.target.value));
+        
+        const cp = document.getElementById('sl-cp-gain');
+        if(cp) cp.addEventListener('input', e => this.devSettings.cpGain = parseInt(e.target.value));
     }
 
     setSoundVolumes() {
@@ -369,6 +420,7 @@ class MiniroomApp {
             zone.addEventListener('touchend', e => { e.preventDefault(); this.joystick.active=false; knob.style.transform=`translate(0px,0px)`; });
         }
     }
+    
     updateJoystick(cx, cy, sx, sy, knob) {
         let dx = cx - sx; let dy = cy - sy; const dist = Math.sqrt(dx*dx+dy*dy); const max = 40;
         if(dist>max) { dx=(dx/dist)*max; dy=(dy/dist)*max; }
@@ -377,7 +429,9 @@ class MiniroomApp {
     }
     
     initAudio() {
-        this.sounds.bgm = new Audio('BGM.MP3'); this.sounds.bgm.loop = true; this.sounds.bgm.volume = 0.3;
+        this.sounds.bgm = new Audio('BGM.MP3'); 
+        this.sounds.bgm.loop = true; 
+        this.sounds.bgm.volume = 0.3;
         this.sounds.hit = { play: () => {} }; 
         this.setSoundVolumes();
     }
@@ -418,7 +472,6 @@ class MiniroomApp {
         this.ctx.save();
         this.ctx.translate(this.width/2, this.height/2);
         
-        // Shake only if player involved
         if (this.shakeStrength > 0) {
             const dx = (Math.random()-0.5)*this.shakeStrength; const dy = (Math.random()-0.5)*this.shakeStrength;
             this.ctx.translate(dx, dy);
@@ -443,7 +496,6 @@ class MiniroomApp {
 
         this.ctx.restore();
 
-        // Flash only if player involved
         if(this.flashIntensity > 0) {
             this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashIntensity})`;
             this.ctx.fillRect(0,0,this.width,this.height);
@@ -501,9 +553,8 @@ class MiniroomApp {
                 e.stamina = Math.min(e.maxStamina, e.stamina + 0.2);
             }
         } else {
-            // FIX AI: Aggressive seek or force move
             let target = null;
-            let minDist = 2000; // Increased seek range
+            let minDist = 2000;
             for(let c of this.cubes) {
                 if(Math.abs(c.x-e.x)>2000 || Math.abs(c.y-e.y)>2000) continue;
                 const d = Math.sqrt((e.x-c.x)**2 + (e.y-c.y)**2);
@@ -515,15 +566,13 @@ class MiniroomApp {
                 ax = (dx/minDist) * currentAccel * 1.0; 
                 ay = (dy/minDist) * currentAccel * 1.0;
             } else {
-                // If no target, move towards center strongly
                 const distFromCenter = Math.sqrt(e.x*e.x + e.y*e.y);
                 if(distFromCenter > 1000) {
                     const angle = Math.atan2(-e.y, -e.x);
                     ax = Math.cos(angle) * currentAccel * 0.5;
                     ay = Math.sin(angle) * currentAccel * 0.5;
                 } else {
-                    // Random wander
-                    if (e.moveTimer <= 0) { e.moveTimer = Math.random()*60+30; e.moveAngle = Math.random()*Math.PI*2; }
+                    if (e.moveTimer <= 0) { e.moveTimer = Math.random()*120+60; e.moveAngle = Math.random()*Math.PI*2; }
                     e.moveTimer--;
                     ax = Math.cos(e.moveAngle)*currentAccel*0.5; ay = Math.sin(e.moveAngle)*currentAccel*0.5;
                 }
@@ -562,7 +611,7 @@ class MiniroomApp {
             const angle = Math.atan2(e.y, e.x);
             e.x = Math.cos(angle) * (this.worldRadius - e.radius);
             e.y = Math.sin(angle) * (this.worldRadius - e.radius);
-            e.vx *= -0.8; e.vy *= -0.8; // Strong bounce
+            e.vx *= -0.8; e.vy *= -0.8;
         }
 
         if(e.resonanceTimer > 0) e.resonanceTimer--;
@@ -670,6 +719,7 @@ class MiniroomApp {
             this.flashIntensity = 0.5; 
             this.shakeStrength = 30;
             this.showNotification("RESONANCE!!");
+            this.cp += 0.005;
         }
         
         a.resonanceTimer = 60; b.resonanceTimer = 60;
@@ -677,7 +727,6 @@ class MiniroomApp {
         a.vx = Math.cos(angle)*force; a.vy = Math.sin(angle)*force;
         b.vx = -Math.cos(angle)*force; b.vy = -Math.sin(angle)*force;
         
-        if (isPlayerInvolved) this.cp += 0.005;
         this.dropRandomTail(a); this.dropRandomTail(b);
     }
 
@@ -714,14 +763,6 @@ class MiniroomApp {
         }
     }
 
-    activateDigestion() {
-        if(this.player.digestSkill.cooldown > 0) return;
-        if(this.player.digestLockTimer > 0) { this.showNotification("DIGEST LOCKED!"); return; }
-        this.player.digestSkill.activeTimer = this.DIGEST_ACTIVE_TIME;
-        this.player.digestSkill.cooldown = this.DIGEST_COOLDOWN_TIME;
-        this.showNotification("DIGESTING...");
-    }
-
     updateCubes() {
         for(let i=this.cubes.length-1; i>=0; i--) {
             const c = this.cubes[i];
@@ -743,9 +784,6 @@ class MiniroomApp {
         while(e.growthBuffer >= this.GROWTH_THRESHOLD) {
             e.growthBuffer -= this.GROWTH_THRESHOLD;
             e.tail.push({ color: c.color, x: e.x, y: e.y });
-        }
-        if(e === this.player) {
-            // WP is calculated from AP/CP now, but visual feedback is nice
         }
     }
 
@@ -814,7 +852,6 @@ class MiniroomApp {
             x = rx; y = ry;
             
             let ox = x, oy = y, inten = 0;
-            // Optimization
             if (Math.abs(x - px) < 800 && Math.abs(y - py) < 800) {
                  const d2 = (x-px)**2 + (y-py)**2;
                  if (d2 < 250000) {
@@ -823,6 +860,17 @@ class MiniroomApp {
                      ox -= Math.cos(ang)*t*60; oy -= Math.sin(ang)*t*60;
                      inten += t;
                  }
+            }
+            // Ripple (Donut)
+            for(let sw of this.shockwaves) {
+                const d = Math.sqrt((x-sw.x)**2 + (y-sw.y)**2);
+                if(Math.abs(d-sw.r) < 150) {
+                    const t = 1 - Math.abs(d-sw.r)/150;
+                    const w = Math.sin((d-sw.r)*0.1)*40*sw.alpha*sw.intensity;
+                    const a = Math.atan2(y-sw.y, x-sw.x);
+                    ox += Math.cos(a)*w; oy += Math.sin(a)*w;
+                    inten += t*sw.intensity;
+                }
             }
             return {x:ox, y:oy, i:Math.min(inten, 2)};
         };
@@ -951,18 +999,12 @@ class MiniroomApp {
         this.ctx.restore();
     }
 
-    addWP(n) { if(this.wp<this.maxWp) this.wp = Math.min(this.wp+n, this.maxWp); }
-    showNotification(t) { const el = document.getElementById('notification'); el.innerText=t; el.style.opacity=1; clearTimeout(this.nt); this.nt=setTimeout(()=>el.style.opacity=0, 2000); }
-    refillAura() { if(this.wp>=1){this.wp--;this.player.aura=100;this.spawnShockwave(this.player.x,this.player.y,300);this.playSound('pickup');} }
-    resetGame() { 
-        this.wp=0; this.ap=0; this.cp=0;
-        this.player.x=0; this.player.y=0; this.player.tail=[]; this.player.path=[];
-        this.cubes=[]; for(let i=0;i<400;i++)this.spawnCubeRandomly(); 
-        this.rivals.forEach(r => { r.x=(Math.random()-0.5)*2500; r.y=(Math.random()-0.5)*2500; r.tail=[]; });
-        this.showNotification("WORLD RESET"); 
+    toggleMute() { 
+        this.soundEnabled = !this.soundEnabled;
+        const btn = document.getElementById('mute-btn');
+        btn.innerText = this.soundEnabled ? '🔊 Sound On' : '🔇 Muted';
+        if(this.sounds.bgm) this.sounds.bgm.muted = !this.soundEnabled;
     }
-    
-    toggleMute() { this.soundEnabled=!this.soundEnabled; if(this.sounds.bgm) this.sounds.bgm.muted=!this.soundEnabled; }
     toggleSettings() { document.getElementById('settings-panel').classList.toggle('active'); }
     toggleMobileControls() { document.getElementById('mobile-controls').classList.toggle('visible'); }
     
