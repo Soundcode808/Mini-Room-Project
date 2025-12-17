@@ -9,7 +9,7 @@
 
         body {
             margin: 0; overflow: hidden;
-            background-color: #050510;
+            background-color: #020205;
             font-family: 'Orbitron', sans-serif;
             user-select: none;
         }
@@ -31,13 +31,14 @@
         .fever-box {
             background: rgba(0, 0, 0, 0.7);
             border: 2px solid #ffaa00;
-            padding: 10px 20px; border-radius: 20px;
+            padding: 10px 40px; 
+            clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
             color: #ffaa00; text-shadow: 0 0 10px #ffaa00;
             margin-bottom: 5px;
         }
-        .fever-title { font-size: 12px; opacity: 0.8; letter-spacing: 2px; }
-        .fever-timer { font-size: 24px; font-weight: 900; }
-        .jackpot-val { color: #fff; font-size: 14px; margin-top: 2px; }
+        .fever-title { font-size: 10px; opacity: 0.8; letter-spacing: 2px; }
+        .fever-timer { font-size: 20px; font-weight: 900; }
+        .jackpot-val { color: #fff; font-size: 12px; margin-top: 2px; }
 
         /* Top HUD Left */
         .hud-left-container {
@@ -47,20 +48,19 @@
         }
 
         .stats-box {
-            background: rgba(0, 20, 40, 0.9);
-            border: 2px solid rgba(0, 229, 255, 0.8);
-            padding: 12px; border-radius: 8px;
+            background: rgba(0, 20, 40, 0.8);
+            border-left: 3px solid #00e5ff;
+            padding: 12px 20px; 
             backdrop-filter: blur(5px);
             color: #00e5ff;
             min-width: 140px;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+            clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
         }
         .stat-row { 
             display: flex; justify-content: space-between; gap: 15px; 
             margin-bottom: 4px; font-size: 13px; align-items: center;
         }
         .stat-val { font-weight: 700; color: #fff; }
-        .stat-sub { font-size: 10px; color: #aaa; }
         
         .stat-ap { color: #00ff88; }
         .stat-cp { color: #ff00ff; }
@@ -75,10 +75,8 @@
         .progress-bar {
             height: 4px; 
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
             width: 100px;
-            border: 1px solid rgba(255,255,255,0.1);
+            transform: skewX(-20deg);
         }
         .progress-fill {
             height: 100%; width: 0%;
@@ -94,48 +92,71 @@
         /* Skill Icon UI */
         .skill-container {
             position: relative;
-            width: 60px; height: 60px;
-            margin-top: 10px;
+            margin-top: 20px;
+            display: flex; gap: 15px;
         }
-        .skill-icon {
-            width: 100%; height: 100%;
-            border-radius: 50%;
-            background: rgba(0, 20, 40, 0.8);
-            border: 2px solid #555;
-            display: flex; justify-content: center; align-items: center;
-            color: #fff; font-size: 20px; font-weight: bold;
-            box-shadow: 0 0 5px #000;
+        .skill-box {
             position: relative;
-            overflow: hidden;
+            width: 60px; height: 60px;
+            display: flex; justify-content: center; align-items: center;
         }
-        .skill-icon.ready {
-            border-color: #fff;
-            box-shadow: 0 0 15px #fff, 0 0 30px #00e5ff;
-            color: #fff;
+        .skill-frame {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 20, 30, 0.9);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            border: 2px solid #333; 
+            box-shadow: inset 0 0 10px #000;
+            z-index: 1;
         }
+        .skill-svg {
+            position: absolute; top: -2px; left: -2px; width: 64px; height: 64px;
+            z-index: 2; pointer-events: none;
+            fill: none; stroke: #444; stroke-width: 2;
+            transition: stroke 0.3s, filter 0.3s;
+        }
+        
+        .skill-label { 
+            z-index: 3; color: #666; font-size: 24px; font-weight: 900; 
+            text-shadow: 0 2px 2px #000;
+        }
+        .skill-key { 
+            position: absolute; bottom: 8px; z-index: 3; 
+            font-size: 9px; color: #aaa; letter-spacing: 1px;
+        }
+
         .skill-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            border-radius: 50%;
-            pointer-events: none;
+            z-index: 2;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: background 0.1s;
         }
-        .skill-label { z-index: 2; text-shadow: 0 0 5px #000; }
+
+        .skill-box.ready .skill-svg {
+            stroke: #00e5ff;
+            filter: drop-shadow(0 0 5px #00e5ff);
+        }
+        .skill-box.ready .skill-label { color: #fff; }
+        .skill-box.ready .skill-frame { background: rgba(0, 50, 80, 0.8); }
+
+        .skill-box.dash.ready .skill-svg { stroke: #ffaa00; filter: drop-shadow(0 0 5px #ffaa00); }
+        .skill-box.dash.ready .skill-frame { background: rgba(80, 40, 0, 0.8); }
 
         .settings-btn {
             background: rgba(0, 20, 40, 0.8);
             border: 1px solid #00e5ff;
             color: #00e5ff; padding: 8px 15px;
             font-family: 'Orbitron'; font-size: 12px;
-            cursor: pointer; border-radius: 5px;
+            cursor: pointer; 
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
             transition: 0.2s;
-            display: flex; align-items: center; gap: 5px;
-            margin-top: 10px;
+            margin-top: 15px;
         }
         .settings-btn:hover { background: #00e5ff; color: #000; }
 
         .settings-panel {
             background: rgba(0, 10, 20, 0.95);
             border: 1px solid #00e5ff;
-            padding: 15px; border-radius: 8px;
+            padding: 15px; 
             margin-top: 5px;
             display: none;
             flex-direction: column; gap: 10px;
@@ -249,11 +270,25 @@
                 </div>
             </div>
 
-            <!-- New Skill UI -->
             <div class="skill-container">
-                <div id="skill-icon" class="skill-icon ready">
+                <div id="skill-icon-q" class="skill-box">
+                    <svg class="skill-svg" viewBox="0 0 100 100">
+                        <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                    <div class="skill-frame"></div>
+                    <div id="skill-overlay-q" class="skill-overlay"></div>
                     <span class="skill-label">Q</span>
-                    <div id="skill-overlay" class="skill-overlay"></div>
+                    <span class="skill-key">DIGEST</span>
+                </div>
+                
+                <div id="skill-icon-e" class="skill-box dash">
+                    <svg class="skill-svg" viewBox="0 0 100 100">
+                        <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                    <div class="skill-frame"></div>
+                    <div id="skill-overlay-e" class="skill-overlay"></div>
+                    <span class="skill-label">E</span>
+                    <span class="skill-key">DASH</span>
                 </div>
             </div>
 
@@ -270,7 +305,7 @@
         </div>
 
         <div class="controls-hint">
-            [MOUSE] Move | [SPACE] Boost | [Q] Digest (30s CD)
+            [MOUSE/SPACE] Boost > Max Speed > [E] Dash | [Q] Digest
         </div>
         <div id="notification"></div>
     </div>
@@ -330,11 +365,11 @@
             worldSize: 600,
             camHeight: 150, 
             camOffset: 150, 
-            speed: 1.5, // Max speed
+            speed: 1.5, // Max normal speed
             boostSpeed: 2.8,
-            acceleration: 0.05, // Movement acceleration
-            friction: 0.96, // Basic friction
-            turnFriction: 0.92, // Drift friction
+            acceleration: 0.06, // 가속도 상향
+            friction: 0.98, // 마찰력 완화 (최고속도 도달 용이하게)
+            turnFriction: 0.92, 
             npcCount: 5,
             tailOverlap: 0.5, 
             tailSize: 3.5,
@@ -344,12 +379,19 @@
                 small: { color: 0x3388ff, size: 1.2, required: 15, points: 10 }
             },
             cubeCount: 120, 
-            skillDuration: 10000, // 10초 지속
-            skillCooldown: 30000, // 30초 쿨타임
-            digestInterval: 200, // 0.2초마다 소화
+            // Q Skill
+            skillDuration: 10000, // 10s
+            skillCooldown: 30000, // 30s
+            digestInterval: 200, // 0.2s
+            // E Skill
+            dashSpeed: 6.0,
+            dashDuration: 500, 
+            dashCooldown: 5000, 
+            
             fixedY: 3.0,
             collisionDebuffTime: 3000,
-            feverInterval: 600000 
+            feverInterval: 600000,
+            boostCostInterval: 1500 // 1.5초마다 꼬리 소모
         };
 
         let scene, camera, renderer, composer;
@@ -371,22 +413,20 @@
         let stats = {
             ap: 0, cp: 0, wp: 0, digestCount: 0,
             apTimer: 0, tailBuffTimer: 0,
-            regenTimer: 0
+            regenTimer: 0,
+            boostCostTimer: 0 // 부스트 꼬리 소모 타이머
         };
 
         let skillState = {
-            active: false, lastDigest: 0, endTime: 0, cooldownUntil: 0, startTime: 0, cooldownStart: 0
+            active: false, lastDigest: 0, endTime: 0, cooldownUntil: 0, startTime: 0
+        };
+        
+        let dashState = {
+            active: false, endTime: 0, cooldownUntil: 0, velocity: new THREE.Vector3()
         };
 
-        let debuffState = {
-            active: false,
-            endTime: 0
-        };
-
-        let knockbackState = {
-            active: false,
-            endTime: 0
-        };
+        let debuffState = { active: false, endTime: 0 };
+        let knockbackState = { active: false, endTime: 0 };
 
         let jackpotPool = 0;
         let nextFeverTime = Date.now() + CONFIG.feverInterval;
@@ -417,29 +457,21 @@
             const ambient = new THREE.AmbientLight(0x404040, 2.0); 
             scene.add(ambient);
             
-            // --- GRIDS ---
-            // 1. Main Grid (Sparse, bright)
-            const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 80, 0x00ffff, 0x0044aa);
+            // --- GRIDS REWORK ---
+            // 투명도(transparent: true)를 끄고 불투명하게 설정하여 굴절(transmission) 뒤에서도 보이게 함
+            
+            // 1. Main Grid (Bright, Large)
+            const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 40, 0x00ffff, 0x002255);
             gridHelper.position.y = 0;
-            gridHelper.material.transparent = true;
-            gridHelper.material.opacity = 0.5;
-            gridHelper.material.depthWrite = false; // Allow transmission
+            gridHelper.material.transparent = false; 
+            gridHelper.material.opacity = 1.0; 
             scene.add(gridHelper);
 
-            // 2. Mid Grid (New requested layer)
-            const midGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 200, 0x2266cc, 0x112255);
-            midGrid.position.y = -0.05;
-            midGrid.material.transparent = true;
-            midGrid.material.opacity = 0.3;
-            midGrid.material.depthWrite = false;
-            scene.add(midGrid);
-
-            // 3. Sub Grid (Dense, dark)
-            const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 400, 0x4400ff, 0x110033);
+            // 2. Mid Grid (Dense)
+            const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 160, 0x224488, 0x081122);
             subGrid.position.y = -0.1; 
-            subGrid.material.transparent = true;
-            subGrid.material.opacity = 0.2;
-            subGrid.material.depthWrite = false;
+            subGrid.material.transparent = false;
+            subGrid.material.opacity = 1.0;
             scene.add(subGrid);
             
             createBoundary();
@@ -504,17 +536,19 @@
             const midMesh = createWireframeMesh(midGeo, coreColor);
             group.add(midMesh);
 
-            // 3. 블랙홀 굴절 구체 (White Rim 제거, 굴절 복구)
+            // 3. 블랙홀 굴절 구체 (Refraction Sphere)
             const distGeo = new THREE.SphereGeometry(5.0, 64, 64);
             const distMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff, 
-                metalness: 0,
-                roughness: 0,
+                color: 0xffffff,
+                metalness: 0.0,
+                roughness: 0.0,
                 transmission: 1.0, 
-                thickness: 5.0,
+                thickness: 2.0, 
                 ior: 2.33, 
+                clearcoat: 1.0, 
+                clearcoatRoughness: 0.0,
                 transparent: true,
-                opacity: 1.0, 
+                opacity: 1.0,
                 side: THREE.DoubleSide
             });
             const distMesh = new THREE.Mesh(distGeo, distMat);
@@ -643,16 +677,15 @@
 
         function handleKeyDown(e) {
             if (e.code === 'Space') isBoost = true;
-            if (e.code === 'KeyQ' || e.code === 'Keyq') {
-                activateSkill();
-            }
+            if (e.code === 'KeyQ' || e.code === 'Keyq') activateSkill();
+            if (e.code === 'KeyE' || e.code === 'Keye') activateDash();
         }
 
         function activateSkill() {
             const now = Date.now();
             if (skillState.active) return;
             if (now < skillState.cooldownUntil) {
-                showNotification(`SKILL ON COOLDOWN`);
+                showNotification(`DIGEST CD: ${Math.ceil((skillState.cooldownUntil-now)/1000)}s`);
                 return;
             }
             skillState.active = true;
@@ -661,10 +694,35 @@
             skillState.cooldownStart = skillState.endTime;
             skillState.cooldownUntil = now + CONFIG.skillCooldown; 
             
-            showNotification("DIGESTION SKILL ACTIVATED!");
+            showNotification("DIGESTION MODE ON");
             player.mesh.userData.outer.material.color.setHex(0xff0055);
+        }
+
+        function activateDash() {
+            const now = Date.now();
+            if (dashState.active) return;
+            if (now < dashState.cooldownUntil) {
+                showNotification(`DASH CD: ${Math.ceil((dashState.cooldownUntil-now)/1000)}s`);
+                return;
+            }
             
-            updateSkillUI(now);
+            // Check speed requirement: > 90% of Boost Speed
+            const currentSpeed = player.velocity.length();
+            if (currentSpeed < CONFIG.boostSpeed * 0.9) { 
+                showNotification("NEED MAX SPEED!");
+                return;
+            }
+
+            dashState.active = true;
+            dashState.endTime = now + CONFIG.dashDuration;
+            dashState.cooldownUntil = now + CONFIG.dashCooldown;
+            
+            // Lock Velocity Direction
+            dashState.velocity = player.velocity.clone().normalize().multiplyScalar(CONFIG.dashSpeed);
+            player.velocity.copy(dashState.velocity);
+            
+            showNotification(">>> DASH! <<<");
+            createExplosion(player.mesh.position, 0xffffff, 20); // Dash effect
         }
 
         function applyCollisionDebuff() {
@@ -678,11 +736,12 @@
             const totalTails = entity.tailMeshes.length;
             if(totalTails === 0) return;
 
-            const scatterCount = Math.floor(totalTails / 2);
+            const scatterCount = Math.floor(totalTails / 2); // 50% 분산
             for(let i=0; i<scatterCount; i++) {
                 const tail = entity.tailMeshes.pop();
                 if(tail) {
                     scene.remove(tail);
+                    // 20 그리드 (약 60 unit) 밖으로 분산
                     const angle = Math.random() * Math.PI * 2;
                     const dist = 60; 
                     const spawnPos = entity.mesh.position.clone();
@@ -694,33 +753,14 @@
                 }
             }
 
-            if (Math.random() < 0.3) {
-                const remaining = entity.tailMeshes.length;
-                const lossCount = Math.floor(remaining * 0.2);
-                if(lossCount > 0) {
-                    for(let i=0; i<lossCount; i++) {
-                        const tail = entity.tailMeshes.pop();
-                        if(tail) {
-                            scene.remove(tail);
-                            jackpotPool += 20; 
-                            createExplosion(tail.position, 0xffaa00, 10); 
-                        }
-                    }
-                    showNotification(`JACKPOT ACCUMULATED!`);
-                }
-            }
-
             if(entity === player) updateHUD();
         }
 
         function checkFeverTime(now) {
             if (now >= nextFeverTime) {
-                if (Math.random() < 0.1) {
-                    triggerFeverTime();
-                }
+                if (Math.random() < 0.1) triggerFeverTime();
                 nextFeverTime = now + CONFIG.feverInterval;
             }
-            
             const remaining = Math.max(0, nextFeverTime - now);
             const mins = Math.floor(remaining / 60000);
             const secs = Math.floor((remaining % 60000) / 1000);
@@ -731,9 +771,7 @@
         function triggerFeverTime() {
             showNotification("FEVER TIME! JACKPOT!");
             const count = Math.floor(jackpotPool / 20); 
-            for(let i=0; i<count; i++) {
-                spawnCube();
-            }
+            for(let i=0; i<count; i++) spawnCube();
             jackpotPool = 0;
         }
 
@@ -748,6 +786,16 @@
             updateSkillUI(now);
             checkFeverTime(now);
 
+            // Dash Logic
+            if (dashState.active) {
+                if (now > dashState.endTime) {
+                    dashState.active = false;
+                    player.velocity.normalize().multiplyScalar(CONFIG.boostSpeed);
+                } else {
+                    player.velocity.copy(dashState.velocity);
+                }
+            }
+
             if (debuffState.active && now > debuffState.endTime) {
                 debuffState.active = false;
                 document.body.classList.remove('glitch-active');
@@ -759,6 +807,23 @@
             }
 
             if (player) {
+                // Boost Cost: 1 tail per 1.5s
+                if (isBoost) {
+                    stats.boostCostTimer += deltaTime;
+                    if (stats.boostCostTimer >= 1.5) {
+                        if (player.tailMeshes.length > 0) {
+                            const tail = player.tailMeshes.pop();
+                            scene.remove(tail);
+                            // Drop small cube at current position
+                            spawnCube({x: player.mesh.position.x, z: player.mesh.position.z}); 
+                            updateHUD();
+                        }
+                        stats.boostCostTimer = 0;
+                    }
+                } else {
+                    stats.boostCostTimer = 0;
+                }
+
                 stats.regenTimer += deltaTime;
                 if (stats.regenTimer >= 0.5) { 
                     if (Math.random() < 0.3) { 
@@ -798,49 +863,42 @@
                 updateAP(deltaTime);
                 updateCP(deltaTime);
 
-                // --- Movement Logic (Acceleration + Drift) ---
-                if (!knockbackState.active) {
+                // --- Movement Logic ---
+                if (!knockbackState.active && !dashState.active) {
                     raycaster.setFromCamera(mouse, camera);
                     const intersect = new THREE.Vector3();
                     raycaster.ray.intersectPlane(plane, intersect);
                     
                     const inputDir = new THREE.Vector3().subVectors(intersect, player.mesh.position);
-                    inputDir.y = 0; // 평면 이동
+                    inputDir.y = 0; 
                     
                     if (inputDir.length() > 1) {
                         inputDir.normalize();
                         
-                        // Drift Calculation: Angle between current velocity and input
                         let currentDir = player.velocity.clone().normalize();
                         if (player.velocity.lengthSq() < 0.01) currentDir = inputDir.clone(); 
                         
-                        const dot = currentDir.dot(inputDir); // 1 = straight, -1 = opposite
+                        const dot = currentDir.dot(inputDir); 
                         
-                        // Turn Friction: 급격한 회전일수록 감속 (Drift/Slide feeling)
                         let turnFactor = 1.0;
-                        if (dot < 0.5) {
-                            turnFactor = CONFIG.turnFriction; // 감속
-                        }
+                        if (dot < 0.5) turnFactor = CONFIG.turnFriction; 
 
-                        // Apply Acceleration
+                        // Acceleration Curve
                         const acc = isBoost ? CONFIG.acceleration * 2 : CONFIG.acceleration;
                         player.velocity.add(inputDir.multiplyScalar(acc));
-                        
-                        // Apply Turn Friction to Velocity
                         player.velocity.multiplyScalar(turnFactor);
                     }
                 }
                 
-                // General Friction
-                player.velocity.multiplyScalar(CONFIG.friction);
-
-                // Cap Max Speed
-                const currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
-                if (player.velocity.length() > currentMaxSpeed) {
-                    player.velocity.setLength(currentMaxSpeed);
+                if (!dashState.active) {
+                    player.velocity.multiplyScalar(CONFIG.friction);
+                    // Cap Speed
+                    const currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
+                    if (player.velocity.length() > currentMaxSpeed) {
+                        player.velocity.setLength(currentMaxSpeed);
+                    }
                 }
 
-                // Apply Position
                 player.mesh.position.add(player.velocity);
                 player.mesh.position.y = CONFIG.fixedY;
                 
@@ -848,7 +906,6 @@
                 player.mesh.position.x = Math.max(-limit, Math.min(limit, player.mesh.position.x));
                 player.mesh.position.z = Math.max(-limit, Math.min(limit, player.mesh.position.z));
 
-                // Camera Follow
                 camera.position.set(
                     player.mesh.position.x, 
                     CONFIG.camHeight, 
@@ -867,7 +924,6 @@
                 updateTail(player);
                 updateNPCs();
                 checkEntityCollisions();
-                checkTailSnatching(); 
                 
                 if (frameCount % 5 === 0 && isOnline) uploadState();
             }
@@ -930,9 +986,7 @@
 
             for (let i = cubes.length - 1; i >= 0; i--) {
                 const c = cubes[i];
-                
                 c.mesh.rotation.y += c.rotateSpeed;
-
                 const dist = entity.mesh.position.distanceTo(c.mesh.position);
                 
                 if (dist < 30) {
@@ -970,46 +1024,38 @@
                     const midPoint = new THREE.Vector3().addVectors(player.mesh.position, npc.mesh.position).multiplyScalar(0.5);
                     createExplosion(midPoint, 0xffffff, 15);
 
-                    // Normalize collision normal (Player to NPC)
                     const collisionNormal = new THREE.Vector3().subVectors(player.mesh.position, npc.mesh.position);
                     collisionNormal.y = 0;
                     collisionNormal.normalize();
 
-                    const force = 10.0; // Strong Bounce
+                    if (dashState.active) {
+                        // Dash Hit: Player NO recoil, NPC recoil HUGE
+                        const hitForce = collisionNormal.clone().multiplyScalar(-20.0);
+                        npc.velocity.add(hitForce);
+                        
+                        scatterTails(npc); // Only NPC loses tails
+                        
+                        createExplosion(npc.mesh.position, 0xff0000, 20);
+                        showNotification("SMASH HIT!");
+                    } else {
+                        // Normal Collision: Both recoil, Both scatter
+                        const force = 10.0; 
+                        
+                        const playerBounce = collisionNormal.clone().multiplyScalar(force);
+                        player.velocity.add(playerBounce);
+                        
+                        const npcBounce = collisionNormal.clone().multiplyScalar(-force);
+                        npc.velocity.add(npcBounce);
+                        
+                        // KNOCKBACK STUN (Block input for player)
+                        knockbackState.active = true;
+                        knockbackState.endTime = Date.now() + 300; 
 
-                    // Bounce Player
-                    const playerBounce = collisionNormal.clone().multiplyScalar(force);
-                    player.velocity.add(playerBounce);
-
-                    // Bounce NPC (Opposite direction)
-                    const npcBounce = collisionNormal.clone().multiplyScalar(-force);
-                    npc.velocity.add(npcBounce);
-                    
-                    // KNOCKBACK STUN (Disable input)
-                    knockbackState.active = true;
-                    knockbackState.endTime = Date.now() + 300; 
-
-                    scatterTails(player);
-                    scatterTails(npc);
-                    applyCollisionDebuff();
-                    gainCP(0.0001); 
-                }
-            });
-        }
-
-        function checkTailSnatching() {
-            npcs.forEach(npc => {
-                for (let i = 0; i < npc.tailMeshes.length; i++) {
-                    const tail = npc.tailMeshes[i];
-                    const dist = player.mesh.position.distanceTo(tail.position);
-                    if (dist < 4.0) {
-                        createExplosion(tail.position, 0xff00ff, 15);
-                        scene.remove(tail);
-                        npc.tailMeshes.splice(i, 1); 
-                        addTailSegment(player, 0xff00ff);
+                        scatterTails(player);
+                        scatterTails(npc);
+                        
+                        applyCollisionDebuff();
                         gainCP(0.0001); 
-                        showNotification("TAIL SNATCHED!");
-                        break; 
                     }
                 }
             });
@@ -1081,34 +1127,47 @@
         }
 
         function updateSkillUI(now) {
-            const icon = document.getElementById('skill-icon');
-            const overlay = document.getElementById('skill-overlay');
+            // Q Skill
+            const iconQ = document.getElementById('skill-icon-q');
+            const overlayQ = document.getElementById('skill-overlay-q');
             
             if (!skillState.active && now > skillState.cooldownUntil) {
-                icon.classList.add('ready');
-                overlay.style.background = 'none';
-                return;
+                iconQ.classList.add('ready');
+                overlayQ.style.background = 'none';
+            } else {
+                iconQ.classList.remove('ready');
+                if (skillState.active) {
+                    const p = (now - skillState.startTime) / CONFIG.skillDuration;
+                    overlayQ.style.background = `conic-gradient(rgba(0,0,0,0.8) ${p * 360}deg, transparent 0deg)`;
+                } else {
+                    const elapsed = now - skillState.startTime - CONFIG.skillDuration;
+                    const duration = CONFIG.skillCooldown - CONFIG.skillDuration;
+                    const p = elapsed / duration;
+                    overlayQ.style.background = `conic-gradient(transparent ${p * 360}deg, rgba(0,0,0,0.8) 0deg)`;
+                }
             }
 
-            icon.classList.remove('ready');
-
-            if (skillState.active) {
-                const progress = (now - skillState.startTime) / CONFIG.skillDuration;
-                const deg = progress * 360;
-                overlay.style.background = `conic-gradient(rgba(0,0,0,0.8) ${deg}deg, transparent 0deg)`;
-            } 
-            else if (now < skillState.cooldownUntil) {
-                const totalCD = CONFIG.skillCooldown; 
-                const elapsed = now - skillState.startTime;
-                
-                if (elapsed < CONFIG.skillDuration) {
-                    const p = elapsed / CONFIG.skillDuration;
-                    overlay.style.background = `conic-gradient(rgba(0,0,0,0.8) ${p * 360}deg, transparent 0deg)`;
+            // E Skill
+            const iconE = document.getElementById('skill-icon-e');
+            const overlayE = document.getElementById('skill-overlay-e');
+            
+            // Check speed requirement: > 90% of Boost Speed
+            const canDash = player && player.velocity.length() > CONFIG.boostSpeed * 0.9;
+            
+            if (!dashState.active && now > dashState.cooldownUntil && canDash) {
+                iconE.classList.add('ready');
+                overlayE.style.background = 'none';
+            } else {
+                iconE.classList.remove('ready');
+                if (dashState.active) {
+                    overlayE.style.background = 'rgba(255,255,255,0.5)';
+                } else if (now < dashState.cooldownUntil) {
+                    const elapsed = now - (dashState.endTime);
+                    const duration = CONFIG.dashCooldown;
+                    const p = elapsed / duration;
+                    overlayE.style.background = `conic-gradient(transparent ${p * 360}deg, rgba(0,0,0,0.8) 0deg)`;
                 } else {
-                    const cdElapsed = elapsed - CONFIG.skillDuration;
-                    const cdDuration = totalCD - CONFIG.skillDuration;
-                    const p = cdElapsed / cdDuration;
-                    overlay.style.background = `conic-gradient(transparent ${p * 360}deg, rgba(0,0,0,0.8) 0deg)`;
+                    overlayE.style.background = 'rgba(0,0,0,0.5)';
                 }
             }
         }
