@@ -220,7 +220,8 @@
             font-size: 14px;
         }
         .arrow-btn:hover { background: #00e5ff; color: #000; }
-        #bgm-label { min-width: 60px; text-align: center; color: #00e5ff; font-size: 11px; }
+        #bgm-label { min-width: 50px; text-align: center; color: #00e5ff; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        #bgm-mode-icon { font-size: 16px; margin-left: 5px; cursor: pointer; }
 
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
@@ -371,6 +372,7 @@
                     <button class="arrow-btn" onclick="changeBGM(-1)">◀</button>
                     <span id="bgm-label">DEFAULT</span>
                     <button class="arrow-btn" onclick="changeBGM(1)">▶</button>
+                    <span id="bgm-mode-icon" onclick="toggleBgmMode()" title="Mode Select">🔁</span>
                 </div>
                 <button id="sound-toggle-btn" class="mute-btn" onclick="toggleSound()">SOUND : ON</button>
             </div>
@@ -419,8 +421,45 @@
         
         let currentBgmIndex = 0;
         let bgmAudio = new Audio();
-        bgmAudio.loop = true;
+        bgmAudio.loop = false; // Controlled manually by onended
         bgmAudio.volume = 0.5;
+
+        // BGM Modes: 0=Sequential(🔁), 1=Random(🔀), 2=Single Loop(🔂)
+        let bgmMode = 0; 
+        const BGM_MODES = [
+            { icon: "🔁", label: "Sequential" },
+            { icon: "🔀", label: "Random" },
+            { icon: "🔂", label: "Repeat" }
+        ];
+
+        bgmAudio.addEventListener('ended', onTrackEnded);
+
+        function onTrackEnded() {
+            if (bgmMode === 2) { 
+                // Single Repeat
+                bgmAudio.currentTime = 0;
+                bgmAudio.play().catch(e => console.log(e));
+            } else if (bgmMode === 1) {
+                // Random
+                let nextIndex = currentBgmIndex;
+                while(nextIndex === currentBgmIndex && BGM_LIST.length > 1) {
+                    nextIndex = Math.floor(Math.random() * BGM_LIST.length);
+                }
+                currentBgmIndex = nextIndex;
+                playCurrentBGM();
+            } else {
+                // Sequential
+                currentBgmIndex = (currentBgmIndex + 1) % BGM_LIST.length;
+                playCurrentBGM();
+            }
+        }
+
+        function playCurrentBGM() {
+            const bgm = BGM_LIST[currentBgmIndex];
+            document.getElementById('bgm-label').innerText = bgm.name;
+            bgmAudio.src = bgm.url;
+            bgmAudio.play().catch(e => console.log("Auto-play blocked", e));
+        }
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'miniroom-3d-tesseract';
@@ -1840,6 +1879,25 @@
             bgmAudio.src = bgm.url;
             if (wasPlaying) {
                 bgmAudio.play().catch(e => console.log("BGM play error", e));
+            }
+        };
+
+        // --- NEW BGM MODE TOGGLE LOGIC ---
+        window.toggleBgmMode = function() {
+            bgmMode = (bgmMode + 1) % BGM_MODES.length;
+            const mode = BGM_MODES[bgmMode];
+            const iconEl = document.getElementById('bgm-mode-icon');
+            
+            iconEl.innerText = mode.icon;
+            iconEl.title = mode.label; // Tooltip for clarity
+            
+            showNotification(`BGM MODE: ${mode.label.toUpperCase()}`);
+            
+            // Adjust loop property immediately
+            if (bgmMode === 2) { // Single Repeat
+                bgmAudio.loop = true;
+            } else {
+                bgmAudio.loop = false; // Let 'ended' event handle logic
             }
         };
 
