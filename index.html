@@ -21,7 +21,7 @@
             display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* Top Center (Fever Timer) */
+        /* Top Center (Fever & Combo) */
         .hud-top-center {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center;
@@ -39,6 +39,22 @@
         .fever-title { font-size: 10px; opacity: 0.8; letter-spacing: 2px; }
         .fever-timer { font-size: 20px; font-weight: 900; }
         .jackpot-val { color: #fff; font-size: 12px; margin-top: 2px; }
+
+        .combo-box {
+            margin-top: 10px;
+            text-align: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .combo-box.active { opacity: 1; }
+        .combo-text { font-size: 24px; color: #ff0055; font-weight: 900; text-shadow: 0 0 10px #ff0055; }
+        .combo-timer-bar {
+            width: 100%; height: 4px; background: #333; margin-top: 5px;
+            position: relative; overflow: hidden;
+        }
+        .combo-fill {
+            height: 100%; background: #ff0055; width: 100%;
+            box-shadow: 0 0 5px #ff0055;
+        }
 
         /* Top HUD Left */
         .hud-left-container {
@@ -255,6 +271,11 @@
                 <div id="fever-timer" class="fever-timer">05:00</div>
                 <div class="jackpot-val">POOL: <span id="jackpot-val">0</span></div>
             </div>
+            
+            <div id="combo-box" class="combo-box">
+                <div id="combo-text" class="combo-text">COMBO x0</div>
+                <div class="combo-timer-bar"><div id="combo-fill" class="combo-fill"></div></div>
+            </div>
         </div>
 
         <div class="hud-left-container">
@@ -403,7 +424,12 @@
             boostCostInterval: 1000,
             staminaMax: 100,
             staminaRegen: 15, 
-            staminaDrain: 30 
+            staminaDrain: 30,
+            
+            // Popcorn / Combo Config
+            comboWindow: 10000, // 10 sec to chain
+            popcornDuration: 6000, // 6 sec effect
+            popcornSpawnRate: 0.1 // seconds
         };
 
         let scene, camera, renderer, composer;
@@ -444,6 +470,13 @@
         let jackpotPool = 0;
         let nextFeverTime = Date.now() + CONFIG.feverInterval;
 
+        // Combo & Popcorn Variables
+        let comboCount = 0;
+        let comboTimer = 0; // Counts down from CONFIG.comboWindow
+        let popcornMode = false;
+        let popcornTimer = 0;
+        let popcornSpawnTimer = 0;
+
         function init3D() {
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x050510, 0.0015);
@@ -470,20 +503,7 @@
             const ambient = new THREE.AmbientLight(0x404040, 2.0); 
             scene.add(ambient);
             
-            // --- GRIDS ---
-            const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 40, 0x00ffff, 0x002255);
-            gridHelper.position.y = 0;
-            gridHelper.material.transparent = false; 
-            gridHelper.material.opacity = 1.0; 
-            scene.add(gridHelper);
-
-            const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 160, 0x0088ff, 0x081133); 
-            subGrid.position.y = -0.1; 
-            subGrid.material.transparent = false;
-            subGrid.material.opacity = 0.8; 
-            scene.add(subGrid);
-            
-            createBoundary();
+            createEnvironment();
             createPlayer();
             for(let i=0; i<CONFIG.npcCount; i++) createNPC();
             for(let i=0; i<CONFIG.cubeCount; i++) spawnCube();
@@ -501,25 +521,56 @@
             updateHUD();
         }
 
-        function createBoundary() {
+        function createEnvironment() {
             const size = CONFIG.worldSize;
-            const points = [];
-            points.push(new THREE.Vector3(-size/2, 0, -size/2));
-            points.push(new THREE.Vector3(size/2, 0, -size/2));
-            points.push(new THREE.Vector3(size/2, 0, size/2));
-            points.push(new THREE.Vector3(-size/2, 0, size/2));
-            points.push(new THREE.Vector3(-size/2, 0, -size/2));
 
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ 
-                color: 0xffffff, 
-                linewidth: 2, 
-                transparent: true, 
-                opacity: 0.8 
-            });
-            const line = new THREE.Line(geometry, material);
-            line.position.y = 0.1; 
-            scene.add(line);
+            // 1. Thick White Boundary (Walls)
+            const wallThick = 4.0;
+            const wallHeight = 8.0;
+            const wallGeoH = new THREE.BoxGeometry(size + wallThick, wallHeight, wallThick);
+            const wallGeoV = new THREE.BoxGeometry(wallThick, wallHeight, size + wallThick);
+            const wallMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            const wallTop = new THREE.Mesh(wallGeoH, wallMat);
+            wallTop.position.set(0, wallHeight/2, -size/2);
+            scene.add(wallTop);
+
+            const wallBot = new THREE.Mesh(wallGeoH, wallMat);
+            wallBot.position.set(0, wallHeight/2, size/2);
+            scene.add(wallBot);
+
+            const wallLeft = new THREE.Mesh(wallGeoV, wallMat);
+            wallLeft.position.set(-size/2, wallHeight/2, 0);
+            scene.add(wallLeft);
+
+            const wallRight = new THREE.Mesh(wallGeoV, wallMat);
+            wallRight.position.set(size/2, wallHeight/2, 0);
+            scene.add(wallRight);
+
+            // 2. Central Cross (Second Thickest)
+            const crossThick = 2.0;
+            const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
+            const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
+            const crossMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa }); // Light grey/white
+            
+            const crossH = new THREE.Mesh(crossGeoH, crossMat);
+            crossH.position.y = 0.5;
+            scene.add(crossH);
+
+            const crossV = new THREE.Mesh(crossGeoV, crossMat);
+            crossV.position.y = 0.5;
+            scene.add(crossV);
+
+            // 3. Middle Grid (Strong Blue)
+            const gridMid = new THREE.GridHelper(size, 20, 0x0044ff, 0x002288);
+            gridMid.position.y = 0.1;
+            scene.add(gridMid);
+
+            // 4. Deep Abyss Grid (Dark Blue, Small, Parallax)
+            // Placed lower (y = -30) and denser to create depth
+            const gridDeep = new THREE.GridHelper(size * 1.5, 100, 0x001144, 0x000511);
+            gridDeep.position.y = -30;
+            scene.add(gridDeep);
         }
 
         function createWireframeMesh(geometry, color) {
@@ -637,7 +688,7 @@
             };
         }
 
-        function spawnCube(posOverride = null) {
+        function spawnCube(posOverride = null, velOverride = null) {
             const range = CONFIG.worldSize / 2;
             const x = posOverride ? posOverride.x : (Math.random() - 0.5) * 2 * range;
             const z = posOverride ? posOverride.z : (Math.random() - 0.5) * 2 * range;
@@ -662,7 +713,8 @@
                 type: type, 
                 points: config.points, 
                 color: config.color,
-                floatOffset: Math.random() * Math.PI * 2 
+                floatOffset: Math.random() * Math.PI * 2,
+                velocity: velOverride // For popcorn cubes
             };
             scene.add(mesh);
             cubes.push({ mesh: mesh, rotateSpeed: -(Math.random() * 0.005 + 0.002) }); 
@@ -793,6 +845,12 @@
             jackpotPool = 0;
         }
 
+        function triggerPopcorn(pos) {
+            popcornMode = true;
+            popcornTimer = CONFIG.popcornDuration / 1000;
+            showNotification("POPCORN PARTY STARTED!");
+        }
+
         let lastTime = Date.now();
         function animate() {
             requestAnimationFrame(animate);
@@ -803,6 +861,48 @@
 
             updateSkillUI(now);
             checkFeverTime(now);
+
+            // Popcorn Logic
+            if (popcornMode) {
+                popcornTimer -= deltaTime;
+                popcornSpawnTimer += deltaTime;
+                if (popcornSpawnTimer > CONFIG.popcornSpawnRate) {
+                    // Spawn cube at player pos with random velocity
+                    const v = new THREE.Vector3(
+                        (Math.random()-0.5)*20, 
+                        10 + Math.random()*10, 
+                        (Math.random()-0.5)*20
+                    );
+                    spawnCube(player.mesh.position.clone(), v);
+                    popcornSpawnTimer = 0;
+                }
+                if (popcornTimer <= 0) {
+                    popcornMode = false;
+                    showNotification("PARTY OVER");
+                }
+            }
+
+            // Combo Timer Logic
+            if (comboCount > 0) {
+                comboTimer -= deltaTime * 1000;
+                if (comboTimer <= 0) {
+                    comboCount = 0;
+                    comboTimer = 0;
+                }
+                const pct = Math.max(0, comboTimer / CONFIG.comboWindow) * 100;
+                document.getElementById('combo-fill').style.width = pct + '%';
+            } else {
+                document.getElementById('combo-fill').style.width = '0%';
+            }
+            
+            const comboEl = document.getElementById('combo-box');
+            if (comboCount > 0 || popcornMode) {
+                comboEl.classList.add('active');
+                document.getElementById('combo-text').innerText = popcornMode ? "PARTY!" : `COMBO x${comboCount}`;
+            } else {
+                comboEl.classList.remove('active');
+            }
+
 
             // Dash Logic
             if (dashState.active) {
@@ -1010,15 +1110,27 @@
             for (let i = cubes.length - 1; i >= 0; i--) {
                 const c = cubes[i];
                 c.mesh.rotation.y += c.rotateSpeed;
-                const dist = entity.mesh.position.distanceTo(c.mesh.position);
-                
-                if (dist < 30) {
-                    c.mesh.position.lerp(entity.mesh.position, 0.25);
-                    c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
-                } else {
-                    c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
-                }
 
+                // Physics for popcorn cubes
+                if (c.mesh.userData.velocity) {
+                    c.mesh.position.add(c.mesh.userData.velocity);
+                    c.mesh.userData.velocity.y -= 0.5; // Gravity
+                    if (c.mesh.position.y < CONFIG.fixedY) {
+                        c.mesh.position.y = CONFIG.fixedY;
+                        c.mesh.userData.velocity.multiplyScalar(0.5); // Friction
+                        c.mesh.userData.velocity.y = 0;
+                    }
+                } else {
+                     const dist = entity.mesh.position.distanceTo(c.mesh.position);
+                     if (dist < 30) {
+                        c.mesh.position.lerp(entity.mesh.position, 0.25);
+                        c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
+                    } else {
+                        c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
+                    }
+                }
+               
+                const dist = entity.mesh.position.distanceTo(c.mesh.position);
                 if (dist < 5.0) { 
                     createExplosion(c.mesh.position, c.mesh.userData.color);
                     scene.remove(c.mesh);
@@ -1035,7 +1147,7 @@
                     } else {
                         if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
                     }
-                    spawnCube();
+                    if (!popcornMode) spawnCube(); // Normal respawn
                 }
             }
         }
@@ -1052,16 +1164,24 @@
                     collisionNormal.normalize();
 
                     if (dashState.active) {
-                        // Dash Hit: Player NO recoil, NPC recoil HUGE, 80% scatter
+                        // Dash Hit: SUCCESS
                         const hitForce = collisionNormal.clone().multiplyScalar(-20.0);
                         npc.velocity.add(hitForce);
-                        
-                        scatterTails(npc, 0.8); // 80% Scatter
-                        
+                        scatterTails(npc, 0.8);
                         createExplosion(npc.mesh.position, 0xff0000, 20);
                         showNotification("SMASH HIT!");
+
+                        // Combo Logic
+                        comboCount++;
+                        comboTimer = CONFIG.comboWindow; // Reset timer to 10s
+                        
+                        if (comboCount >= 3) {
+                            triggerPopcorn(player.mesh.position);
+                            comboCount = 0; // Reset combo for next party
+                        }
+
                     } else {
-                        // Normal Collision: Both recoil, Both scatter 50%
+                        // Normal Collision: Fail
                         const force = 10.0; 
                         
                         const playerBounce = collisionNormal.clone().multiplyScalar(force);
@@ -1070,7 +1190,7 @@
                         const npcBounce = collisionNormal.clone().multiplyScalar(-force);
                         npc.velocity.add(npcBounce);
                         
-                        // KNOCKBACK STUN (Block input for player)
+                        // KNOCKBACK STUN
                         knockbackState.active = true;
                         knockbackState.endTime = Date.now() + 300; 
 
@@ -1079,6 +1199,10 @@
                         
                         applyCollisionDebuff();
                         gainCP(0.0001); 
+
+                        // Reset Combo on fail
+                        comboCount = 0;
+                        comboTimer = 0;
                     }
                 }
             });
