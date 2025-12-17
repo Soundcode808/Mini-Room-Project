@@ -400,8 +400,8 @@
             camOffset: 150, 
             speed: 0.8, 
             boostSpeed: 1.6, 
-            acceleration: 0.06, 
-            friction: 0.98,
+            acceleration: 0.02, // Slower initial acceleration (Was 0.06)
+            friction: 0.992, // High inertia/sliding (Was 0.98)
             turnFriction: 0.92, 
             npcCount: 5,
             tailOverlap: 0.5, 
@@ -428,7 +428,7 @@
             
             // Popcorn / Combo Config
             comboWindow: 20000, // 20 sec to chain
-            popcornDuration: 5000, // 5 sec effect (Changed)
+            popcornDuration: 5000, // 5 sec effect
             popcornSpawnRate: 0.1 // seconds
         };
 
@@ -555,13 +555,14 @@
             wallRight.position.set(size/2, wallHeight/2, 0);
             scene.add(wallRight);
 
-            // 2. Central Cross (Second Thickest) -> Thinner (0.6)
-            // Changed material to Lambert for non-neon look
-            const crossThick = 0.6; 
+            // 2. Central Cross (Visual Update)
+            // Thicker and Non-Fluorescent Sky Blue
+            const crossThick = 3.0; // Thicker than grid
             const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
             const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
-            // Non-emissive material, dark blue/slate color
-            const crossMat = new THREE.MeshLambertMaterial({ color: 0x335588 }); 
+            
+            // Lambert Material for non-emissive/matte look
+            const crossMat = new THREE.MeshLambertMaterial({ color: 0x5599ff }); // Sky Blue
             
             const crossH = new THREE.Mesh(crossGeoH, crossMat);
             crossH.position.y = 0.5;
@@ -572,15 +573,21 @@
             scene.add(crossV);
 
             // 3. Middle Grid (Strong Blue)
-            const gridMid = new THREE.GridHelper(size, 20, 0x0044ff, 0x002288);
+            // Slightly thicker visual (by color intensity/brightness since lineWidth is restricted)
+            const gridMid = new THREE.GridHelper(size, 20, 0x0088ff, 0x0044cc);
             gridMid.position.y = 0.1;
             scene.add(gridMid);
 
-            // 4. Deep Abyss Grid (Dark Blue, Small, Parallax)
-            // Changed to Dark Blue: 0x000088 / 0x000044
-            const gridDeep = new THREE.GridHelper(size * 1.5, 300, 0x000088, 0x000044);
-            gridDeep.position.y = -30;
-            scene.add(gridDeep);
+            // 4. Deep Abyss Grid (Composite: Mid + Small)
+            // Layer 1: Mimics the Middle Grid
+            const gridDeepMid = new THREE.GridHelper(size, 20, 0x002266, 0x001133);
+            gridDeepMid.position.y = -30;
+            scene.add(gridDeepMid);
+
+            // Layer 2: Small Grid details
+            const gridDeepSmall = new THREE.GridHelper(size * 1.5, 300, 0x001144, 0x000511);
+            gridDeepSmall.position.y = -30;
+            scene.add(gridDeepSmall);
         }
 
         function createWireframeMesh(geometry, color) {
@@ -871,7 +878,7 @@
             updateSkillUI(now);
             checkFeverTime(now);
 
-            // Cycle Wall Color (Slower)
+            // Cycle Wall Color (Slower - 5x Slower)
             if (wallMaterial) {
                 // Reduced speed factor from 0.0001 to 0.00002
                 const hue = (now * 0.00002) % 1;
@@ -1027,7 +1034,8 @@
                         let turnFactor = 1.0;
                         if (dot < 0.5) turnFactor = CONFIG.turnFriction; 
 
-                        const acc = isBoost ? CONFIG.acceleration * 2 : CONFIG.acceleration;
+                        // Acceleration Logic (Normal vs Boost)
+                        const acc = isBoost ? CONFIG.acceleration * 1.5 : CONFIG.acceleration; // Boost heavy but strong
                         player.velocity.add(inputDir.multiplyScalar(acc));
                         player.velocity.multiplyScalar(turnFactor);
                     }
