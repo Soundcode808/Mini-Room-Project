@@ -518,7 +518,7 @@
             digestInterval: 200, 
             dashSpeed: 6.0,
             dashDuration: 500, 
-            dashCooldown: 10000, 
+            dashCooldown: 5000, // Reduced to 5s from 10s for better experience
             fixedY: 3.0,
             collisionDebuffTime: 3000,
             feverInterval: 300000,
@@ -937,9 +937,9 @@
 
         function handleKeyDown(e) {
             if (e.code === 'Space') isBoost = true;
-            if (e.code === 'KeyQ' || e.code === 'Keyq') activateSkill();
-            if (e.code === 'KeyE' || e.code === 'Keye') activateDash();
-            if (e.code === 'KeyW' || e.code === 'Keyw') useItem();
+            if (e.code === 'KeyQ') activateSkill();
+            if (e.code === 'KeyE') activateDash();
+            if (e.code === 'KeyW') useItem();
         }
 
         function activateSkill() {
@@ -971,8 +971,9 @@
                 return;
             }
             const currentSpeed = player.velocity.length();
-            if (currentSpeed < CONFIG.boostSpeed * 0.9) { 
-                showNotification("NEED MAX SPEED!");
+            // Adjusted threshold: 0.5 to make Dash much easier to activate
+            if (currentSpeed < 0.5) { 
+                showNotification("NEED SPEED!");
                 return;
             }
             dashState.active = true;
