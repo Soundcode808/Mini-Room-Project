@@ -427,7 +427,7 @@
             staminaDrain: 30,
             
             // Popcorn / Combo Config
-            comboWindow: 10000, // 10 sec to chain
+            comboWindow: 20000, // 20 sec to chain (INCREASED from 10s)
             popcornDuration: 6000, // 6 sec effect
             popcornSpawnRate: 0.1 // seconds
         };
@@ -524,12 +524,13 @@
         function createEnvironment() {
             const size = CONFIG.worldSize;
 
-            // 1. Thick White Boundary (Walls)
-            const wallThick = 4.0;
+            // 1. Thick White Boundary (Walls) -> Adjusted to Darker Sky Blue (0x2277aa) & Thinner (2.0)
+            const wallThick = 2.0;
             const wallHeight = 8.0;
             const wallGeoH = new THREE.BoxGeometry(size + wallThick, wallHeight, wallThick);
             const wallGeoV = new THREE.BoxGeometry(wallThick, wallHeight, size + wallThick);
-            const wallMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            // Darker Sky Blue (0x2277aa)
+            const wallMat = new THREE.MeshBasicMaterial({ color: 0x2277aa });
 
             const wallTop = new THREE.Mesh(wallGeoH, wallMat);
             wallTop.position.set(0, wallHeight/2, -size/2);
@@ -547,11 +548,12 @@
             wallRight.position.set(size/2, wallHeight/2, 0);
             scene.add(wallRight);
 
-            // 2. Central Cross (Second Thickest)
-            const crossThick = 2.0;
+            // 2. Central Cross (Second Thickest) -> Thinner (1.2) & Bright Blue (0x3399ff)
+            const crossThick = 1.2;
             const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
             const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
-            const crossMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa }); // Light grey/white
+            // Bright Blue (0x3399ff)
+            const crossMat = new THREE.MeshBasicMaterial({ color: 0x3399ff }); 
             
             const crossH = new THREE.Mesh(crossGeoH, crossMat);
             crossH.position.y = 0.5;
