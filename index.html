@@ -268,7 +268,7 @@
 
     <div id="login-overlay">
         <div class="title">MINIROOM<br>TESSERACT 3D</div>
-        <div class="subtitle">NEON MULTIPLAYER VERSE</div>
+        <div class="subtitle">NEON ICE VERSE</div>
         <input type="text" id="username" class="login-input" placeholder="CODENAME" maxlength="10">
         <button class="start-btn" onclick="startGame()">CONNECT</button>
     </div>
@@ -297,7 +297,7 @@
                     <div class="progress-bar"><div id="red-fill" class="progress-fill" style="background:#ff3333; box-shadow:0 0 8px #ff3333;"></div></div>
                     <div class="progress-bar"><div id="yel-fill" class="progress-fill" style="background:#ffff33; box-shadow:0 0 8px #ffff33;"></div></div>
                     <div class="progress-bar"><div id="blu-fill" class="progress-fill" style="background:#3388ff; box-shadow:0 0 8px #3388ff;"></div></div>
-                    <span class="gauge-label" style="color:#00ff88; margin-top:2px;">STM</span>
+                    <span class="gauge-label" style="color:#00ff88; margin-top:2px;" id="stm-label">STM</span>
                     <div class="progress-bar"><div id="stamina-fill" class="progress-fill" style="background:#00ff88; box-shadow:0 0 8px #00ff88; width: 100%;"></div></div>
                 </div>
 
@@ -392,6 +392,7 @@
         
         let db, auth, currentUser, myDocRef;
         let isOnline = false;
+        let gameStartTime = 0; // Game Start Timestamp
 
         async function initFirebase() {
             if (!firebaseConfig) return;
@@ -419,11 +420,16 @@
             worldSize: 600,
             camHeight: 150, 
             camOffset: 150, 
-            speed: 1.2, // Increased normal speed
-            boostSpeed: 3.0, // Increased boost speed for max inertia/drift
+            speed: 1.2, 
+            boostSpeed: 3.0, 
             acceleration: 0.02, 
-            friction: 0.995, // High inertia (drifting feeling)
-            turnFriction: 0.92, 
+            
+            // --- PHYSICS MODIFICATIONS ---
+            // Friction close to 1.0 = Ice sliding. 0.998 is very slippery.
+            friction: 0.998, 
+            // Turn friction close to 1.0 = Car drifts sideways instead of slowing down.
+            turnFriction: 0.98, 
+
             npcCount: 5,
             tailOverlap: 0.5, 
             tailSize: 3.5,
@@ -447,6 +453,9 @@
             staminaRegen: 15, 
             staminaDrain: 30,
             
+            // --- INFINITE BOOST ---
+            infiniteBoostDuration: 20000, // 20 Seconds
+
             // Popcorn / Combo Config
             comboWindow: 20000, 
             popcornDuration: 5000, 
@@ -454,7 +463,7 @@
 
             // Item Config
             itemSpawnInterval: 60000, // 1 minute
-            initialItemSpawnDelay: 30000, // 30 seconds
+            initialItemSpawnDelay: 10000, // 10 seconds delay
             itemTypes: ['speed', 'shield', 'energy', 'teleport']
         };
 
@@ -554,6 +563,8 @@
             window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoost = false; });
 
             nextFeverTime = Date.now() + CONFIG.feverInterval;
+            
+            // Set Item Spawn Time based on Game Start (10s delay)
             nextItemSpawnTime = Date.now() + CONFIG.initialItemSpawnDelay;
 
             animate();
@@ -1146,12 +1157,34 @@
             }
 
             if (player) {
-                // Stamina Logic
+                // Stamina Logic (Updated for Infinite Boost)
+                const isInfiniteBoost = (now - gameStartTime) < CONFIG.infiniteBoostDuration;
+                
                 if (isBoost && stats.stamina > 0) {
-                    stats.stamina = Math.max(0, stats.stamina - CONFIG.staminaDrain * deltaTime);
+                    if (!isInfiniteBoost) {
+                        stats.stamina = Math.max(0, stats.stamina - CONFIG.staminaDrain * deltaTime);
+                    }
                 } else {
                     isBoost = false; 
                     stats.stamina = Math.min(CONFIG.staminaMax, stats.stamina + CONFIG.staminaRegen * deltaTime);
+                }
+
+                // Stamina UI Color Update
+                const stmBar = document.getElementById('stamina-fill');
+                const stmLabel = document.getElementById('stm-label');
+                const stmPct = (stats.stamina / CONFIG.staminaMax) * 100;
+                stmBar.style.width = `${stmPct}%`;
+                
+                if (isInfiniteBoost) {
+                    stmBar.style.background = '#d000ff'; // Purple for infinite
+                    stmBar.style.boxShadow = '0 0 8px #d000ff';
+                    stmLabel.innerText = "NO LIMIT";
+                    stmLabel.style.color = '#d000ff';
+                } else {
+                    stmBar.style.background = '#00ff88';
+                    stmBar.style.boxShadow = '0 0 8px #00ff88';
+                    stmLabel.innerText = "STM";
+                    stmLabel.style.color = '#00ff88';
                 }
 
                 // Boost Tail Drop
@@ -1274,9 +1307,6 @@
                 checkEntityCollisions();
                 
                 if (frameCount % 5 === 0 && isOnline) uploadState();
-                
-                const stmPct = (stats.stamina / CONFIG.staminaMax) * 100;
-                document.getElementById('stamina-fill').style.width = `${stmPct}%`;
             }
 
             for (const uid in remotePlayers) {
@@ -1417,7 +1447,7 @@
                         c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
                     }
                 }
-               
+                
                 const dist = entity.mesh.position.distanceTo(c.mesh.position);
                 if (dist < 5.0) { 
                     createExplosion(c.mesh.position, c.mesh.userData.color);
@@ -1734,6 +1764,9 @@
             document.getElementById('login-overlay').style.display = 'none';
             if(player) player.username = username;
             
+            // Set Game Start Time for Infinite Boost Logic
+            gameStartTime = Date.now();
+
             init3D();
             initFirebase();
             
@@ -1742,6 +1775,7 @@
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
             showNotification(`WELCOME, ${username}`);
+            showNotification(`UNLIMITED BOOST ACTIVE (20s)`);
         };
 
         function showNotification(msg) {
