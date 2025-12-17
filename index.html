@@ -21,11 +21,29 @@
             display: flex; flex-direction: column; justify-content: space-between;
         }
 
+        /* Top Center (Fever Timer) */
+        .hud-top-center {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            text-align: center;
+            display: flex; flex-direction: column; align-items: center;
+            pointer-events: none;
+        }
+        .fever-box {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ffaa00;
+            padding: 10px 20px; border-radius: 20px;
+            color: #ffaa00; text-shadow: 0 0 10px #ffaa00;
+            margin-bottom: 5px;
+        }
+        .fever-title { font-size: 12px; opacity: 0.8; letter-spacing: 2px; }
+        .fever-timer { font-size: 24px; font-weight: 900; }
+        .jackpot-val { color: #fff; font-size: 14px; margin-top: 2px; }
+
         /* Top HUD Left */
         .hud-left-container {
             display: flex; flex-direction: column; gap: 10px;
             align-items: flex-start;
-            pointer-events: auto; /* 버튼 클릭을 위해 */
+            pointer-events: auto;
         }
 
         .stats-box {
@@ -44,16 +62,10 @@
         .stat-val { font-weight: 700; color: #fff; }
         .stat-sub { font-size: 10px; color: #aaa; }
         
-        /* New Stats Colors */
         .stat-ap { color: #00ff88; }
         .stat-cp { color: #ff00ff; }
         .stat-wp { color: #ffff00; text-shadow: 0 0 10px #ffff00; }
 
-        .skill-status {
-            font-size: 11px; color: #ff0055; margin-top: 5px; text-align: right;
-            font-weight: bold;
-        }
-        
         .gauge-group {
             display: flex; flex-direction: column; gap: 3px;
             justify-content: center;
@@ -79,7 +91,35 @@
             padding-top: 5px; text-align: center; color: #aaa; font-size: 11px;
         }
 
-        /* Settings Button & Panel */
+        /* Skill Icon UI */
+        .skill-container {
+            position: relative;
+            width: 60px; height: 60px;
+            margin-top: 10px;
+        }
+        .skill-icon {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #555;
+            display: flex; justify-content: center; align-items: center;
+            color: #fff; font-size: 20px; font-weight: bold;
+            box-shadow: 0 0 5px #000;
+            position: relative;
+            overflow: hidden;
+        }
+        .skill-icon.ready {
+            border-color: #fff;
+            box-shadow: 0 0 15px #fff, 0 0 30px #00e5ff;
+            color: #fff;
+        }
+        .skill-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .skill-label { z-index: 2; text-shadow: 0 0 5px #000; }
+
         .settings-btn {
             background: rgba(0, 20, 40, 0.8);
             border: 1px solid #00e5ff;
@@ -88,6 +128,7 @@
             cursor: pointer; border-radius: 5px;
             transition: 0.2s;
             display: flex; align-items: center; gap: 5px;
+            margin-top: 10px;
         }
         .settings-btn:hover { background: #00e5ff; color: #000; }
 
@@ -96,7 +137,7 @@
             border: 1px solid #00e5ff;
             padding: 15px; border-radius: 8px;
             margin-top: 5px;
-            display: none; /* Hidden by default */
+            display: none;
             flex-direction: column; gap: 10px;
             width: 160px;
         }
@@ -112,14 +153,12 @@
         }
         .mute-btn.muted { background: #ff3333; color: #000; }
 
-        /* Bottom Controls */
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
             text-align: center; color: rgba(255, 255, 255, 0.5);
             font-size: 12px; pointer-events: none;
         }
 
-        /* Login Overlay */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 999;
@@ -156,7 +195,6 @@
             pointer-events: none; opacity: 0; transition: opacity 0.3s;
         }
 
-        /* Glitch Effect Class for Noise */
         .glitch-active {
             animation: glitch-anim 0.2s infinite;
         }
@@ -172,7 +210,6 @@
 </head>
 <body>
 
-    <!-- Game Container -->
     <div id="login-overlay">
         <div class="title">MINIROOM<br>TESSERACT 3D</div>
         <div class="subtitle">NEON MULTIPLAYER VERSE</div>
@@ -181,8 +218,15 @@
     </div>
 
     <div id="ui-layer">
+        <div class="hud-top-center">
+            <div class="fever-box">
+                <div class="fever-title">NEXT FEVER CHANCE</div>
+                <div id="fever-timer" class="fever-timer">10:00</div>
+                <div class="jackpot-val">POOL: <span id="jackpot-val">0</span></div>
+            </div>
+        </div>
+
         <div class="hud-left-container">
-            <!-- Main Stats -->
             <div class="stats-box">
                 <div class="stat-row"><span>SCORE</span><span id="score-val" class="stat-val">0</span></div>
                 <div class="stat-row"><span>TAIL</span><span id="tail-val" class="stat-val">0</span></div>
@@ -194,12 +238,8 @@
                 </div>
 
                 <div class="user-count">USER (<span id="players-val">1</span>)</div>
-                
-                <div id="skill-timer" class="skill-status" style="display:none">DIGESTING...</div>
-                <div id="skill-cd" class="skill-status" style="color: #666; display:none">CD: 60s</div>
             </div>
             
-            <!-- Advanced Stats -->
             <div class="stats-box">
                 <div class="stat-row"><span class="stat-ap">AP</span><span id="ap-val" class="stat-val">0.000</span></div>
                 <div class="stat-row"><span class="stat-cp">CP</span><span id="cp-val" class="stat-val">0.0000</span></div>
@@ -209,7 +249,14 @@
                 </div>
             </div>
 
-            <!-- Settings -->
+            <!-- New Skill UI -->
+            <div class="skill-container">
+                <div id="skill-icon" class="skill-icon ready">
+                    <span class="skill-label">Q</span>
+                    <div id="skill-overlay" class="skill-overlay"></div>
+                </div>
+            </div>
+
             <button class="settings-btn" onclick="toggleSettings()">⚙ SETTINGS</button>
             <div id="settings-panel" class="settings-panel">
                 <div class="volume-control">
@@ -223,12 +270,11 @@
         </div>
 
         <div class="controls-hint">
-            [MOUSE] Move | [SPACE] Boost | [Q] Digest (1min CD)
+            [MOUSE] Move | [SPACE] Boost | [Q] Digest (30s CD)
         </div>
         <div id="notification"></div>
     </div>
 
-    <!-- Import Modules -->
     <script type="importmap">
         {
             "imports": {
@@ -244,18 +290,13 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
         import * as THREE from 'three';
 
-        // --- BGM SETUP ---
-        // TODO: 아래 URL을 본인의 깃허브 원본 주소(Raw)로 변경하세요.
-        // 예: 'https://raw.githubusercontent.com/User/Repo/main/BGM.mp3'
         const BGM_URL = 'https://github.com/Soundcode808/Mini-Room-Project/blob/main/BGM.mp3'; 
         let bgmAudio = new Audio();
         bgmAudio.loop = true;
         bgmAudio.volume = 0.5;
 
-        // --- FIREBASE SETUP ---
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'miniroom-3d-tesseract';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -289,8 +330,11 @@
             worldSize: 600,
             camHeight: 150, 
             camOffset: 150, 
-            speed: 0.9,
-            boostSpeed: 1.8,
+            speed: 1.5, // Max speed
+            boostSpeed: 2.8,
+            acceleration: 0.05, // Movement acceleration
+            friction: 0.96, // Basic friction
+            turnFriction: 0.92, // Drift friction
             npcCount: 5,
             tailOverlap: 0.5, 
             tailSize: 3.5,
@@ -299,14 +343,16 @@
                 medium: { color: 0xffff33, size: 2.0, required: 10, points: 20 },
                 small: { color: 0x3388ff, size: 1.2, required: 15, points: 10 }
             },
-            skillDuration: 5000,
-            skillCooldown: 60000, // 1분
-            digestInterval: 1000,
+            cubeCount: 120, 
+            skillDuration: 10000, // 10초 지속
+            skillCooldown: 30000, // 30초 쿨타임
+            digestInterval: 200, // 0.2초마다 소화
             fixedY: 3.0,
-            collisionDebuffTime: 3000 // 3초
+            collisionDebuffTime: 3000,
+            feverInterval: 600000 
         };
 
-        let scene, camera, renderer, composer, bloomPass;
+        let scene, camera, renderer, composer;
         let player;
         let npcs = [];
         let mouse = new THREE.Vector2();
@@ -324,18 +370,26 @@
 
         let stats = {
             ap: 0, cp: 0, wp: 0, digestCount: 0,
-            apTimer: 0, tailBuffTimer: 0
+            apTimer: 0, tailBuffTimer: 0,
+            regenTimer: 0
         };
 
         let skillState = {
-            active: false, lastDigest: 0, endTime: 0, cooldownUntil: 0
+            active: false, lastDigest: 0, endTime: 0, cooldownUntil: 0, startTime: 0, cooldownStart: 0
         };
 
-        // Collision Debuff State
         let debuffState = {
             active: false,
             endTime: 0
         };
+
+        let knockbackState = {
+            active: false,
+            endTime: 0
+        };
+
+        let jackpotPool = 0;
+        let nextFeverTime = Date.now() + CONFIG.feverInterval;
 
         function init3D() {
             scene = new THREE.Scene();
@@ -351,7 +405,7 @@
 
             const renderScene = new RenderPass(scene, camera);
             
-            bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
             bloomPass.threshold = 0; 
             bloomPass.strength = 2.5; 
             bloomPass.radius = 0.8;
@@ -363,21 +417,35 @@
             const ambient = new THREE.AmbientLight(0x404040, 2.0); 
             scene.add(ambient);
             
+            // --- GRIDS ---
+            // 1. Main Grid (Sparse, bright)
             const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 80, 0x00ffff, 0x0044aa);
             gridHelper.position.y = 0;
-            gridHelper.material.opacity = 0.5;
             gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.5;
+            gridHelper.material.depthWrite = false; // Allow transmission
             scene.add(gridHelper);
 
+            // 2. Mid Grid (New requested layer)
+            const midGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 200, 0x2266cc, 0x112255);
+            midGrid.position.y = -0.05;
+            midGrid.material.transparent = true;
+            midGrid.material.opacity = 0.3;
+            midGrid.material.depthWrite = false;
+            scene.add(midGrid);
+
+            // 3. Sub Grid (Dense, dark)
             const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 400, 0x4400ff, 0x110033);
             subGrid.position.y = -0.1; 
-            subGrid.material.opacity = 0.2;
             subGrid.material.transparent = true;
+            subGrid.material.opacity = 0.2;
+            subGrid.material.depthWrite = false;
             scene.add(subGrid);
             
+            createBoundary();
             createPlayer();
             for(let i=0; i<CONFIG.npcCount; i++) createNPC();
-            for(let i=0; i<60; i++) spawnCube();
+            for(let i=0; i<CONFIG.cubeCount; i++) spawnCube();
 
             window.addEventListener('resize', onResize);
             window.addEventListener('mousemove', onMouseMove);
@@ -386,11 +454,33 @@
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoost = false; });
 
+            nextFeverTime = Date.now() + CONFIG.feverInterval;
+
             animate();
             updateHUD();
         }
 
-        // --- MESH FACTORY ---
+        function createBoundary() {
+            const size = CONFIG.worldSize;
+            const points = [];
+            points.push(new THREE.Vector3(-size/2, 0, -size/2));
+            points.push(new THREE.Vector3(size/2, 0, -size/2));
+            points.push(new THREE.Vector3(size/2, 0, size/2));
+            points.push(new THREE.Vector3(-size/2, 0, size/2));
+            points.push(new THREE.Vector3(-size/2, 0, -size/2));
+
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0xffffff, 
+                linewidth: 2, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const line = new THREE.Line(geometry, material);
+            line.position.y = 0.1; 
+            scene.add(line);
+        }
+
         function createWireframeMesh(geometry, color) {
             const wireframe = new THREE.WireframeGeometry(geometry);
             const line = new THREE.LineSegments(wireframe);
@@ -406,34 +496,25 @@
         function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff) {
             const group = new THREE.Group();
 
-            // 1. 외부 그리드 구체
             const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
             const outerMesh = createWireframeMesh(outerGeo, color);
             group.add(outerMesh);
 
-            // 1-1. 외곽 하얀 라인 (White Outline) - Scale을 약간 키워 외곽선 효과
-            const rimGeo = new THREE.IcosahedronGeometry(3.1, 1);
-            const rimMesh = createWireframeMesh(rimGeo, 0xffffff);
-            rimMesh.material.opacity = 0.4;
-            group.add(rimMesh);
-
-            // 2. 내부 그리드 구체
             const midGeo = new THREE.IcosahedronGeometry(2.2, 1);
             const midMesh = createWireframeMesh(midGeo, coreColor);
             group.add(midMesh);
 
-            // 3. 블랙홀 굴절 효과 (Enhanced Black Hole)
-            // 크기를 키워 영향력 범위를 시각화 (3.5 -> 5.0)
-            const distGeo = new THREE.SphereGeometry(5.0, 32, 32);
+            // 3. 블랙홀 굴절 구체 (White Rim 제거, 굴절 복구)
+            const distGeo = new THREE.SphereGeometry(5.0, 64, 64);
             const distMat = new THREE.MeshPhysicalMaterial({
-                color: 0x88ccff, 
-                metalness: 0.1,
+                color: 0xffffff, 
+                metalness: 0,
                 roughness: 0,
-                transmission: 1.0, // 완전 투과
-                thickness: 3.0,
-                ior: 2.0, // 굴절률 증가 (더 강한 왜곡)
+                transmission: 1.0, 
+                thickness: 5.0,
+                ior: 2.33, 
                 transparent: true,
-                opacity: 0.1, 
+                opacity: 1.0, 
                 side: THREE.DoubleSide
             });
             const distMesh = new THREE.Mesh(distGeo, distMat);
@@ -450,9 +531,9 @@
 
             group.userData = {
                 outer: outerMesh,
-                rim: rimMesh,
                 mid: midMesh,
                 core: coreMesh,
+                dist: distMesh, 
                 baseColor: new THREE.Color(color),
                 rotSpeed: 0.02
             };
@@ -462,17 +543,13 @@
 
         function createTailMesh(size, color) {
             const group = new THREE.Group();
-            
             const geo1 = new THREE.BoxGeometry(size, size, size);
             const mesh1 = createWireframeMesh(geo1, color);
-            
             const coreGeo = new THREE.BoxGeometry(size * 0.3, size * 0.3, size * 0.3);
             const coreMat = new THREE.MeshBasicMaterial({ color: color });
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-
             group.add(mesh1);
             group.add(coreMesh);
-            
             return group;
         }
 
@@ -480,7 +557,6 @@
             const mesh = createPlayerMesh();
             mesh.position.y = CONFIG.fixedY; 
             scene.add(mesh);
-            
             player = {
                 mesh: mesh,
                 velocity: new THREE.Vector3(),
@@ -494,13 +570,10 @@
         function createNPC() {
             const mesh = createPlayerMesh(0xff8800, 0xffaa00); 
             mesh.position.y = CONFIG.fixedY;
-            
             const range = CONFIG.worldSize / 2;
             mesh.position.x = (Math.random() - 0.5) * range;
             mesh.position.z = (Math.random() - 0.5) * range;
-            
             scene.add(mesh);
-
             npcs.push({
                 mesh: mesh,
                 velocity: new THREE.Vector3(),
@@ -544,9 +617,14 @@
             );
             mesh.add(core);
 
-            mesh.userData = { type: type, points: config.points, color: config.color };
+            mesh.userData = { 
+                type: type, 
+                points: config.points, 
+                color: config.color,
+                floatOffset: Math.random() * Math.PI * 2 
+            };
             scene.add(mesh);
-            cubes.push({ mesh: mesh, rotateSpeed: Math.random() * 0.05 + 0.02 });
+            cubes.push({ mesh: mesh, rotateSpeed: -(Math.random() * 0.005 + 0.002) }); 
         }
 
         function createExplosion(pos, color, count=8) {
@@ -555,11 +633,9 @@
                 const mat = new THREE.MeshBasicMaterial({ color: color });
                 const mesh = new THREE.Mesh(geo, mat);
                 mesh.position.copy(pos);
-                
                 const vel = new THREE.Vector3(
                     Math.random()-0.5, (Math.random()-0.5)*0.5, Math.random()-0.5 
                 ).normalize().multiplyScalar(0.5 + Math.random());
-                
                 scene.add(mesh);
                 particles.push({ mesh, vel, life: 1.0 });
             }
@@ -579,41 +655,86 @@
                 showNotification(`SKILL ON COOLDOWN`);
                 return;
             }
-
             skillState.active = true;
+            skillState.startTime = now;
             skillState.endTime = now + CONFIG.skillDuration;
+            skillState.cooldownStart = skillState.endTime;
             skillState.cooldownUntil = now + CONFIG.skillCooldown; 
-            showNotification("DIGESTION SKILL ACTIVATED!");
             
+            showNotification("DIGESTION SKILL ACTIVATED!");
             player.mesh.userData.outer.material.color.setHex(0xff0055);
+            
+            updateSkillUI(now);
         }
 
-        // --- GAME LOGIC ---
         function applyCollisionDebuff() {
             debuffState.active = true;
             debuffState.endTime = Date.now() + CONFIG.collisionDebuffTime;
-            document.body.classList.add('glitch-active'); // 화면 노이즈 효과
+            document.body.classList.add('glitch-active');
             showNotification("SYSTEM ERROR: SENSORS OFFLINE");
         }
 
         function scatterTails(entity) {
-            const count = Math.floor(entity.tailMeshes.length / 2);
-            if(count === 0) return;
+            const totalTails = entity.tailMeshes.length;
+            if(totalTails === 0) return;
 
-            for(let i=0; i<count; i++) {
-                // 꼬리 끝에서부터 제거
+            const scatterCount = Math.floor(totalTails / 2);
+            for(let i=0; i<scatterCount; i++) {
                 const tail = entity.tailMeshes.pop();
                 if(tail) {
-                    scene.remove(tail); // 일단 꼬리 메쉬 제거
+                    scene.remove(tail);
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 60; 
+                    const spawnPos = entity.mesh.position.clone();
+                    spawnPos.x += Math.cos(angle) * dist;
+                    spawnPos.z += Math.sin(angle) * dist;
                     
-                    // 해당 위치에 큐브 생성 (흩뿌리기)
-                    spawnCube(tail.position);
-                    // 큐브 생성 후 약간 튕겨나가는 효과를 주면 좋지만, spawnCube는 정적임.
-                    // 간단히 파티클 효과로 대체
+                    spawnCube(spawnPos);
                     createExplosion(tail.position, 0xffffff, 5);
                 }
             }
+
+            if (Math.random() < 0.3) {
+                const remaining = entity.tailMeshes.length;
+                const lossCount = Math.floor(remaining * 0.2);
+                if(lossCount > 0) {
+                    for(let i=0; i<lossCount; i++) {
+                        const tail = entity.tailMeshes.pop();
+                        if(tail) {
+                            scene.remove(tail);
+                            jackpotPool += 20; 
+                            createExplosion(tail.position, 0xffaa00, 10); 
+                        }
+                    }
+                    showNotification(`JACKPOT ACCUMULATED!`);
+                }
+            }
+
             if(entity === player) updateHUD();
+        }
+
+        function checkFeverTime(now) {
+            if (now >= nextFeverTime) {
+                if (Math.random() < 0.1) {
+                    triggerFeverTime();
+                }
+                nextFeverTime = now + CONFIG.feverInterval;
+            }
+            
+            const remaining = Math.max(0, nextFeverTime - now);
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            document.getElementById('fever-timer').innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('jackpot-val').innerText = jackpotPool;
+        }
+
+        function triggerFeverTime() {
+            showNotification("FEVER TIME! JACKPOT!");
+            const count = Math.floor(jackpotPool / 20); 
+            for(let i=0; i<count; i++) {
+                spawnCube();
+            }
+            jackpotPool = 0;
         }
 
         let lastTime = Date.now();
@@ -624,19 +745,37 @@
             const deltaTime = (now - lastTime) / 1000;
             lastTime = now;
 
-            // Debuff Check
+            updateSkillUI(now);
+            checkFeverTime(now);
+
             if (debuffState.active && now > debuffState.endTime) {
                 debuffState.active = false;
                 document.body.classList.remove('glitch-active');
                 showNotification("SYSTEM RESTORED");
             }
 
+            if (knockbackState.active && now > knockbackState.endTime) {
+                knockbackState.active = false;
+            }
+
             if (player) {
-                // Skill Logic
+                stats.regenTimer += deltaTime;
+                if (stats.regenTimer >= 0.5) { 
+                    if (Math.random() < 0.3) { 
+                        const seedPos = player.mesh.position.clone();
+                        setTimeout(() => spawnCube(seedPos), 3000); 
+                    }
+                    stats.regenTimer = 0;
+                }
+
                 if (skillState.active) {
+                    const pulse = 1.0 + Math.sin(now * 0.008) * 0.2; 
+                    player.mesh.userData.dist.scale.setScalar(pulse);
+
                     if (now > skillState.endTime) {
                         skillState.active = false;
                         player.mesh.userData.outer.material.color.setHex(0x0088ff);
+                        player.mesh.userData.dist.scale.setScalar(1);
                         showNotification("SKILL ENDED");
                     } else {
                         if (now - skillState.lastDigest > CONFIG.digestInterval) {
@@ -656,40 +795,60 @@
                     }
                 }
 
-                // Stats Logic
                 updateAP(deltaTime);
                 updateCP(deltaTime);
 
-                // Move
-                raycaster.setFromCamera(mouse, camera);
-                const intersect = new THREE.Vector3();
-                raycaster.ray.intersectPlane(plane, intersect);
-                
-                const dir = new THREE.Vector3().subVectors(intersect, player.mesh.position);
-                dir.y = 0;
-                
-                const speedRatio = player.velocity.length() / CONFIG.boostSpeed;
-                const glowColor = player.mesh.userData.baseColor.clone();
-                glowColor.lerp(new THREE.Color(0xffffff), speedRatio * 0.8);
-                player.mesh.userData.outer.material.color.copy(glowColor);
-                
-                if (dir.length() > 1) {
-                    dir.normalize();
-                    const currentSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
-                    player.velocity.add(dir.multiplyScalar(0.1)); 
+                // --- Movement Logic (Acceleration + Drift) ---
+                if (!knockbackState.active) {
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersect = new THREE.Vector3();
+                    raycaster.ray.intersectPlane(plane, intersect);
+                    
+                    const inputDir = new THREE.Vector3().subVectors(intersect, player.mesh.position);
+                    inputDir.y = 0; // 평면 이동
+                    
+                    if (inputDir.length() > 1) {
+                        inputDir.normalize();
+                        
+                        // Drift Calculation: Angle between current velocity and input
+                        let currentDir = player.velocity.clone().normalize();
+                        if (player.velocity.lengthSq() < 0.01) currentDir = inputDir.clone(); 
+                        
+                        const dot = currentDir.dot(inputDir); // 1 = straight, -1 = opposite
+                        
+                        // Turn Friction: 급격한 회전일수록 감속 (Drift/Slide feeling)
+                        let turnFactor = 1.0;
+                        if (dot < 0.5) {
+                            turnFactor = CONFIG.turnFriction; // 감속
+                        }
+
+                        // Apply Acceleration
+                        const acc = isBoost ? CONFIG.acceleration * 2 : CONFIG.acceleration;
+                        player.velocity.add(inputDir.multiplyScalar(acc));
+                        
+                        // Apply Turn Friction to Velocity
+                        player.velocity.multiplyScalar(turnFactor);
+                    }
                 }
                 
-                player.velocity.multiplyScalar(0.9);
+                // General Friction
+                player.velocity.multiplyScalar(CONFIG.friction);
+
+                // Cap Max Speed
+                const currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
+                if (player.velocity.length() > currentMaxSpeed) {
+                    player.velocity.setLength(currentMaxSpeed);
+                }
+
+                // Apply Position
                 player.mesh.position.add(player.velocity);
-                
                 player.mesh.position.y = CONFIG.fixedY;
-                player.velocity.y = 0;
                 
                 const limit = CONFIG.worldSize / 2;
                 player.mesh.position.x = Math.max(-limit, Math.min(limit, player.mesh.position.x));
                 player.mesh.position.z = Math.max(-limit, Math.min(limit, player.mesh.position.z));
 
-                // Camera
+                // Camera Follow
                 camera.position.set(
                     player.mesh.position.x, 
                     CONFIG.camHeight, 
@@ -697,11 +856,9 @@
                 );
                 camera.lookAt(player.mesh.position.x, 0, player.mesh.position.z);
 
-                // Anim
                 const ud = player.mesh.userData;
                 ud.outer.rotation.y += ud.rotSpeed;
                 ud.outer.rotation.z += ud.rotSpeed * 0.5;
-                ud.rim.rotation.y += ud.rotSpeed * 0.8; // Rim rotate
                 ud.mid.rotation.y -= ud.rotSpeed * 1.5;
 
                 player.path.unshift(player.mesh.position.clone());
@@ -730,7 +887,6 @@
             updateEffects();
 
             composer.render();
-            updateSkillHUD(now);
         }
 
         function updateNPCs() {
@@ -751,7 +907,6 @@
                 npc.velocity.multiplyScalar(0.9);
                 npc.mesh.position.add(npc.velocity);
                 npc.mesh.position.y = CONFIG.fixedY; 
-                npc.velocity.y = 0;
                 
                 const limit = CONFIG.worldSize / 2;
                 if(npc.mesh.position.x < -limit || npc.mesh.position.x > limit) npc.velocity.x *= -1;
@@ -768,14 +923,14 @@
         }
 
         function processCubes(entity) {
-            if (entity === player && debuffState.active) return; // 디버프 시 획득 불가
+            if (entity === player && debuffState.active) return;
 
             entity.mesh.updateMatrixWorld();
+            const now = Date.now() * 0.002;
+
             for (let i = cubes.length - 1; i >= 0; i--) {
                 const c = cubes[i];
                 
-                // 회전 애니메이션 복구
-                c.mesh.rotation.x += c.rotateSpeed;
                 c.mesh.rotation.y += c.rotateSpeed;
 
                 const dist = entity.mesh.position.distanceTo(c.mesh.position);
@@ -783,13 +938,14 @@
                 if (dist < 30) {
                     c.mesh.position.lerp(entity.mesh.position, 0.25);
                     c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
+                } else {
+                    c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
                 }
 
                 if (dist < 5.0) { 
                     createExplosion(c.mesh.position, c.mesh.userData.color);
                     scene.remove(c.mesh);
                     cubes.splice(i, 1);
-                    
                     if (entity === player) {
                         const type = c.mesh.userData.type;
                         score += c.mesh.userData.points;
@@ -802,7 +958,6 @@
                     } else {
                         if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
                     }
-                    
                     spawnCube();
                 }
             }
@@ -815,18 +970,28 @@
                     const midPoint = new THREE.Vector3().addVectors(player.mesh.position, npc.mesh.position).multiplyScalar(0.5);
                     createExplosion(midPoint, 0xffffff, 15);
 
-                    const pushDir = new THREE.Vector3().subVectors(player.mesh.position, npc.mesh.position);
-                    pushDir.y = 0; 
-                    pushDir.normalize();
+                    // Normalize collision normal (Player to NPC)
+                    const collisionNormal = new THREE.Vector3().subVectors(player.mesh.position, npc.mesh.position);
+                    collisionNormal.y = 0;
+                    collisionNormal.normalize();
 
-                    player.velocity.add(pushDir.multiplyScalar(4.0));
-                    npc.velocity.add(pushDir.multiplyScalar(-4.0));
+                    const force = 10.0; // Strong Bounce
+
+                    // Bounce Player
+                    const playerBounce = collisionNormal.clone().multiplyScalar(force);
+                    player.velocity.add(playerBounce);
+
+                    // Bounce NPC (Opposite direction)
+                    const npcBounce = collisionNormal.clone().multiplyScalar(-force);
+                    npc.velocity.add(npcBounce);
                     
-                    // Collision Penalty
+                    // KNOCKBACK STUN (Disable input)
+                    knockbackState.active = true;
+                    knockbackState.endTime = Date.now() + 300; 
+
                     scatterTails(player);
                     scatterTails(npc);
                     applyCollisionDebuff();
-
                     gainCP(0.0001); 
                 }
             });
@@ -915,6 +1080,39 @@
             document.getElementById('blu-fill').style.width = `${bluPct}%`;
         }
 
+        function updateSkillUI(now) {
+            const icon = document.getElementById('skill-icon');
+            const overlay = document.getElementById('skill-overlay');
+            
+            if (!skillState.active && now > skillState.cooldownUntil) {
+                icon.classList.add('ready');
+                overlay.style.background = 'none';
+                return;
+            }
+
+            icon.classList.remove('ready');
+
+            if (skillState.active) {
+                const progress = (now - skillState.startTime) / CONFIG.skillDuration;
+                const deg = progress * 360;
+                overlay.style.background = `conic-gradient(rgba(0,0,0,0.8) ${deg}deg, transparent 0deg)`;
+            } 
+            else if (now < skillState.cooldownUntil) {
+                const totalCD = CONFIG.skillCooldown; 
+                const elapsed = now - skillState.startTime;
+                
+                if (elapsed < CONFIG.skillDuration) {
+                    const p = elapsed / CONFIG.skillDuration;
+                    overlay.style.background = `conic-gradient(rgba(0,0,0,0.8) ${p * 360}deg, transparent 0deg)`;
+                } else {
+                    const cdElapsed = elapsed - CONFIG.skillDuration;
+                    const cdDuration = totalCD - CONFIG.skillDuration;
+                    const p = cdElapsed / cdDuration;
+                    overlay.style.background = `conic-gradient(transparent ${p * 360}deg, rgba(0,0,0,0.8) 0deg)`;
+                }
+            }
+        }
+
         function updateAP(deltaTime) {
             const speed = player.velocity.length();
             if (speed > CONFIG.speed * 1.5) { 
@@ -963,26 +1161,6 @@
             document.getElementById('cp-val').innerText = stats.cp.toFixed(4);
             document.getElementById('wp-val').innerText = stats.wp;
             document.getElementById('digest-cnt').innerText = `${stats.digestCount}/10`;
-        }
-
-        function updateSkillHUD(now) {
-            const timerEl = document.getElementById('skill-timer');
-            const cdEl = document.getElementById('skill-cd');
-
-            if (skillState.active) {
-                timerEl.style.display = 'block';
-                cdEl.style.display = 'none';
-                const remain = Math.ceil((skillState.endTime - now)/1000);
-                timerEl.innerText = `DIGESTING... ${remain}`;
-            } else if (now < skillState.cooldownUntil) {
-                timerEl.style.display = 'none';
-                cdEl.style.display = 'block';
-                const cd = Math.ceil((skillState.cooldownUntil - now)/1000);
-                cdEl.innerText = `CD: ${Math.floor(cd/60)}m ${cd%60}s`;
-            } else {
-                timerEl.style.display = 'none';
-                cdEl.style.display = 'none';
-            }
         }
 
         function uploadState() {
@@ -1042,7 +1220,6 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
 
-        // --- GLOBAL UI FUNCTIONS ---
         window.toggleSettings = function() {
             const panel = document.getElementById('settings-panel');
             panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
@@ -1072,7 +1249,6 @@
             init3D();
             initFirebase();
             
-            // Try to play audio (requires user interaction first)
             bgmAudio.src = BGM_URL;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
