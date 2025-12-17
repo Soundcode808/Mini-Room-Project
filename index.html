@@ -427,8 +427,8 @@
             staminaDrain: 30,
             
             // Popcorn / Combo Config
-            comboWindow: 20000, // 20 sec to chain (INCREASED from 10s)
-            popcornDuration: 6000, // 6 sec effect
+            comboWindow: 20000, // 20 sec to chain
+            popcornDuration: 5000, // 5 sec effect (Changed)
             popcornSpawnRate: 0.1 // seconds
         };
 
@@ -438,6 +438,7 @@
         let mouse = new THREE.Vector2();
         let raycaster = new THREE.Raycaster();
         let plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        let wallMaterial; // For changing wall color
         
         const cubes = [];
         const remotePlayers = {}; 
@@ -524,32 +525,38 @@
         function createEnvironment() {
             const size = CONFIG.worldSize;
 
-            // 1. Thick White Boundary (Walls) -> Adjusted to Darker Sky Blue (0x2277aa) & Thinner (2.0)
+            // 1. Thick White Boundary (Walls) -> Cycling Color
             const wallThick = 2.0;
             const wallHeight = 8.0;
             const wallGeoH = new THREE.BoxGeometry(size + wallThick, wallHeight, wallThick);
             const wallGeoV = new THREE.BoxGeometry(wallThick, wallHeight, size + wallThick);
-            // Darker Sky Blue (0x2277aa)
-            const wallMat = new THREE.MeshBasicMaterial({ color: 0x2277aa });
+            
+            // Initial color, will be updated in animate()
+            // Modified to include transparency
+            wallMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x2277aa,
+                transparent: true,
+                opacity: 0.5
+            });
 
-            const wallTop = new THREE.Mesh(wallGeoH, wallMat);
+            const wallTop = new THREE.Mesh(wallGeoH, wallMaterial);
             wallTop.position.set(0, wallHeight/2, -size/2);
             scene.add(wallTop);
 
-            const wallBot = new THREE.Mesh(wallGeoH, wallMat);
+            const wallBot = new THREE.Mesh(wallGeoH, wallMaterial);
             wallBot.position.set(0, wallHeight/2, size/2);
             scene.add(wallBot);
 
-            const wallLeft = new THREE.Mesh(wallGeoV, wallMat);
+            const wallLeft = new THREE.Mesh(wallGeoV, wallMaterial);
             wallLeft.position.set(-size/2, wallHeight/2, 0);
             scene.add(wallLeft);
 
-            const wallRight = new THREE.Mesh(wallGeoV, wallMat);
+            const wallRight = new THREE.Mesh(wallGeoV, wallMaterial);
             wallRight.position.set(size/2, wallHeight/2, 0);
             scene.add(wallRight);
 
-            // 2. Central Cross (Second Thickest) -> Thinner (1.2) & Bright Blue (0x3399ff)
-            const crossThick = 1.2;
+            // 2. Central Cross (Second Thickest) -> Thinner (0.6)
+            const crossThick = 0.6; // Reduced
             const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
             const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
             // Bright Blue (0x3399ff)
@@ -569,8 +576,8 @@
             scene.add(gridMid);
 
             // 4. Deep Abyss Grid (Dark Blue, Small, Parallax)
-            // Placed lower (y = -30) and denser to create depth
-            const gridDeep = new THREE.GridHelper(size * 1.5, 100, 0x001144, 0x000511);
+            // Increased divisions to 300 for better parallax/perspective
+            const gridDeep = new THREE.GridHelper(size * 1.5, 300, 0x001144, 0x000511);
             gridDeep.position.y = -30;
             scene.add(gridDeep);
         }
@@ -745,10 +752,9 @@
         function activateSkill() {
             const now = Date.now();
             
-            // Relaxed check: Speed > 0.8 is "running". Allow digest if slower.
-            const currentSpeed = player.velocity.length();
-            if (currentSpeed >= 0.8 || isBoost || dashState.active) {
-                showNotification("STOP TO DIGEST!");
+            // Allow Digest at normal speed. Only block during Boost or Dash.
+            if (isBoost || dashState.active) {
+                showNotification("TOO FAST! (BOOST/DASH)");
                 return;
             }
 
@@ -864,18 +870,28 @@
             updateSkillUI(now);
             checkFeverTime(now);
 
+            // Cycle Wall Color
+            if (wallMaterial) {
+                const hue = (now * 0.0001) % 1;
+                // Reduced lightness from 0.5 to 0.25 for dimmer look
+                wallMaterial.color.setHSL(hue, 0.7, 0.25);
+            }
+
             // Popcorn Logic
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 popcornSpawnTimer += deltaTime;
-                if (popcornSpawnTimer > CONFIG.popcornSpawnRate) {
-                    // Spawn cube at player pos with random velocity
-                    const v = new THREE.Vector3(
-                        (Math.random()-0.5)*20, 
-                        10 + Math.random()*10, 
-                        (Math.random()-0.5)*20
-                    );
-                    spawnCube(player.mesh.position.clone(), v);
+                // Faster spawn rate: 0.05s
+                if (popcornSpawnTimer > 0.05) {
+                    // Spawn multiple cubes for "Popcorn" effect
+                    for(let k=0; k<2; k++) {
+                        const v = new THREE.Vector3(
+                            (Math.random()-0.5)*30, 
+                            20 + Math.random()*15, // Higher jump
+                            (Math.random()-0.5)*30
+                        );
+                        spawnCube(player.mesh.position.clone(), v);
+                    }
                     popcornSpawnTimer = 0;
                 }
                 if (popcornTimer <= 0) {
