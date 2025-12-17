@@ -162,13 +162,20 @@
             margin-top: 5px;
             display: none;
             flex-direction: column; gap: 10px;
-            width: 160px;
+            width: 160px; /* 고정 너비 유지 */
+            box-sizing: border-box; /* 패딩 포함 크기 계산 */
         }
         .volume-control {
-            display: flex; align-items: center; gap: 10px; color: #fff; font-size: 12px;
+            display: flex; align-items: center; gap: 5px; color: #fff; font-size: 12px;
+            width: 100%; /* 부모 크기에 맞춤 */
+            justify-content: space-between;
         }
         input[type=range] {
-            width: 80px; accent-color: #00e5ff;
+            flex: 1; /* 남은 공간 모두 차지 */
+            accent-color: #00e5ff;
+            height: 4px;
+            max-width: 90px; /* 패널 밖으로 나가지 않도록 제한 */
+            cursor: pointer;
         }
         .mute-btn {
             background: none; border: 1px solid #00e5ff; color: #00e5ff;
@@ -300,6 +307,10 @@
 
             <button class="settings-btn" onclick="toggleSettings()">⚙ SETTINGS</button>
             <div id="settings-panel" class="settings-panel">
+                <div class="volume-control">
+                    <span>VOL</span>
+                    <input type="range" id="bgm-vol" min="0" max="1" step="0.1" value="0.5" oninput="updateVolume(this.value)">
+                </div>
                 <button id="sound-toggle-btn" class="mute-btn" onclick="toggleSound()">SOUND : ON</button>
             </div>
         </div>
