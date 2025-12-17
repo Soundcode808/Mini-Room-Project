@@ -209,6 +209,19 @@
         }
         .mute-btn.muted { border-color: #ff3333; color: #ff3333; }
 
+        /* BGM Control Styles */
+        .bgm-control {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; color: #fff; font-size: 12px;
+        }
+        .arrow-btn {
+            background: none; border: 1px solid #00e5ff; color: #00e5ff;
+            cursor: pointer; padding: 2px 8px; border-radius: 3px; font-family: 'Orbitron';
+            font-size: 14px;
+        }
+        .arrow-btn:hover { background: #00e5ff; color: #000; }
+        #bgm-label { min-width: 60px; text-align: center; color: #00e5ff; font-size: 11px; }
+
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
             text-align: center; color: rgba(255, 255, 255, 0.5);
@@ -353,6 +366,12 @@
                     <span>VOL</span>
                     <input type="range" id="bgm-vol" min="0" max="1" step="0.1" value="0.5" oninput="updateVolume(this.value)">
                 </div>
+                <!-- BGM Select UI -->
+                <div class="bgm-control">
+                    <button class="arrow-btn" onclick="changeBGM(-1)">◀</button>
+                    <span id="bgm-label">DEFAULT</span>
+                    <button class="arrow-btn" onclick="changeBGM(1)">▶</button>
+                </div>
                 <button id="sound-toggle-btn" class="mute-btn" onclick="toggleSound()">SOUND : ON</button>
             </div>
         </div>
@@ -380,8 +399,25 @@
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import * as THREE from 'three';
 
-        // Updated BGM Link (Raw)
-        const BGM_URL = 'https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM.mp3'; 
+        // BGM Playlist Configuration
+        const BGM_LIST = [
+            { name: "DEFAULT", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM.mp3" },
+            { name: "BGM 1", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM1.mp3" },
+            { name: "BGM 2", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM2.mp3" },
+            { name: "BGM 3", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM3.mp3" },
+            { name: "BGM 4", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM4.mp3" },
+            { name: "BGM 5", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM5.mp3" },
+            { name: "BGM 6", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM6.mp3" },
+            { name: "BGM 7", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM7.mp3" },
+            { name: "BGM 8", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM8.mp3" },
+            { name: "BGM 9", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM9.mp3" },
+            { name: "BGM 10", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM10.mp3" },
+            { name: "BGM 11", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM11.mp3" },
+            { name: "BGM 12", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM12.mp3" },
+            { name: "BGM 13", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM13.mp3" }
+        ];
+        
+        let currentBgmIndex = 0;
         let bgmAudio = new Audio();
         bgmAudio.loop = true;
         bgmAudio.volume = 0.5;
@@ -1787,6 +1823,26 @@
             }
         };
 
+        // BGM Change Logic
+        window.changeBGM = function(dir) {
+            currentBgmIndex += dir;
+            if (currentBgmIndex < 0) currentBgmIndex = BGM_LIST.length - 1;
+            if (currentBgmIndex >= BGM_LIST.length) currentBgmIndex = 0;
+
+            const bgm = BGM_LIST[currentBgmIndex];
+            document.getElementById('bgm-label').innerText = bgm.name;
+
+            // Play new BGM if sound is not muted or paused manually (here assume always loop)
+            // But check if audio was already playing to decide whether to auto-play new track
+            // Actually for background music, we usually want it to just switch.
+            
+            const wasPlaying = !bgmAudio.paused;
+            bgmAudio.src = bgm.url;
+            if (wasPlaying) {
+                bgmAudio.play().catch(e => console.log("BGM play error", e));
+            }
+        };
+
         window.startGame = function() {
             const username = document.getElementById('username').value || "Player";
             document.getElementById('login-overlay').style.display = 'none';
@@ -1799,7 +1855,8 @@
             initFirebase();
             
             // Try to play audio (requires user interaction first)
-            bgmAudio.src = BGM_URL;
+            // Use current selected BGM
+            bgmAudio.src = BGM_LIST[currentBgmIndex].url;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
             showNotification(`WELCOME, ${username}`);
