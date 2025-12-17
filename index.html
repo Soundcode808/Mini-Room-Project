@@ -171,10 +171,11 @@
             width: 80px; accent-color: #00e5ff;
         }
         .mute-btn {
-            background: none; border: 1px solid #ff3333; color: #ff3333;
-            padding: 2px 5px; font-size: 10px; cursor: pointer; border-radius: 3px;
+            background: none; border: 1px solid #00e5ff; color: #00e5ff;
+            padding: 5px 10px; font-size: 12px; cursor: pointer; border-radius: 3px;
+            width: 100%; text-align: center; font-family: 'Orbitron';
         }
-        .mute-btn.muted { background: #ff3333; color: #000; }
+        .mute-btn.muted { border-color: #ff3333; color: #ff3333; }
 
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
@@ -299,13 +300,7 @@
 
             <button class="settings-btn" onclick="toggleSettings()">⚙ SETTINGS</button>
             <div id="settings-panel" class="settings-panel">
-                <div class="volume-control">
-                    <span>VOL</span>
-                    <input type="range" id="bgm-vol" min="0" max="1" step="0.1" value="0.5" oninput="updateVolume(this.value)">
-                </div>
-                <div style="text-align: right;">
-                    <button id="mute-btn" class="mute-btn" onclick="toggleMute()">MUTE</button>
-                </div>
+                <button id="sound-toggle-btn" class="mute-btn" onclick="toggleSound()">SOUND : ON</button>
             </div>
         </div>
 
@@ -332,7 +327,8 @@
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import * as THREE from 'three';
 
-        const BGM_URL = 'https://github.com/Soundcode808/Mini-Room-Project/blob/main/BGM.mp3'; 
+        // Updated BGM Link (Raw)
+        const BGM_URL = 'https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM.mp3'; 
         let bgmAudio = new Audio();
         bgmAudio.loop = true;
         bgmAudio.volume = 0.5;
@@ -392,8 +388,8 @@
             dashCooldown: 10000, 
             fixedY: 3.0,
             collisionDebuffTime: 3000,
-            feverInterval: 300000, // 5 minutes
-            boostCostInterval: 1000, // 1 sec cost
+            feverInterval: 300000,
+            boostCostInterval: 1000,
             staminaMax: 100,
             staminaRegen: 15, 
             staminaDrain: 30 
@@ -464,32 +460,17 @@
             scene.add(ambient);
             
             // --- GRIDS ---
-            // 1. Main Grid (Blue, Large)
-            const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 40, 0x0055ff, 0x0022cc);
+            const gridHelper = new THREE.GridHelper(CONFIG.worldSize * 2, 40, 0x00ffff, 0x002255);
             gridHelper.position.y = 0;
-            gridHelper.material.transparent = true; 
-            gridHelper.material.opacity = 0.8; 
-            gridHelper.material.depthWrite = true;
-            // gridHelper is LineSegments, linewidth doesn't work on WebGL usually.
-            // Using higher opacity and contrast color for "Thick" feel.
+            gridHelper.material.transparent = false; 
+            gridHelper.material.opacity = 1.0; 
             scene.add(gridHelper);
 
-            // 2. Sub Grid (Dense, Darker)
-            const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 160, 0x001133, 0x000511); 
+            const subGrid = new THREE.GridHelper(CONFIG.worldSize * 2, 160, 0x0088ff, 0x081133); 
             subGrid.position.y = -0.1; 
-            subGrid.material.transparent = true;
-            subGrid.material.opacity = 0.3;
-            subGrid.material.depthWrite = true;
+            subGrid.material.transparent = false;
+            subGrid.material.opacity = 0.8; 
             scene.add(subGrid);
-
-            // 3. Center Cross (Sky Blue) - Custom Lines
-            const centerMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2, depthTest: false, transparent: true, opacity: 0.8 });
-            const centerGeo = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-CONFIG.worldSize, 0.1, 0), new THREE.Vector3(CONFIG.worldSize, 0.1, 0),
-                new THREE.Vector3(0, 0.1, -CONFIG.worldSize), new THREE.Vector3(0, 0.1, CONFIG.worldSize)
-            ]);
-            const centerCross = new THREE.LineSegments(centerGeo, centerMat);
-            scene.add(centerCross);
             
             createBoundary();
             createPlayer();
@@ -511,29 +492,23 @@
 
         function createBoundary() {
             const size = CONFIG.worldSize;
-            // Thick boundary using BoxGeometry
-            const thickness = 2.0;
-            const height = 5.0; // wall height
-            const halfSize = size / 2;
-            
-            const group = new THREE.Group();
-            const mat = new THREE.MeshBasicMaterial({ color: 0x0088ff, transparent: true, opacity: 0.6, wireframe: false }); // Solid block-like border
-            
-            // 4 Walls
-            const top = new THREE.Mesh(new THREE.BoxGeometry(size + thickness*2, height, thickness), mat);
-            top.position.set(0, height/2, -halfSize - thickness/2);
-            
-            const bottom = new THREE.Mesh(new THREE.BoxGeometry(size + thickness*2, height, thickness), mat);
-            bottom.position.set(0, height/2, halfSize + thickness/2);
-            
-            const left = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, size), mat);
-            left.position.set(-halfSize - thickness/2, height/2, 0);
-            
-            const right = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, size), mat);
-            right.position.set(halfSize + thickness/2, height/2, 0);
+            const points = [];
+            points.push(new THREE.Vector3(-size/2, 0, -size/2));
+            points.push(new THREE.Vector3(size/2, 0, -size/2));
+            points.push(new THREE.Vector3(size/2, 0, size/2));
+            points.push(new THREE.Vector3(-size/2, 0, size/2));
+            points.push(new THREE.Vector3(-size/2, 0, -size/2));
 
-            group.add(top, bottom, left, right);
-            scene.add(group);
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0xffffff, 
+                linewidth: 2, 
+                transparent: true, 
+                opacity: 0.8 
+            });
+            const line = new THREE.Line(geometry, material);
+            line.position.y = 0.1; 
+            scene.add(line);
         }
 
         function createWireframeMesh(geometry, color) {
@@ -706,7 +681,6 @@
             const now = Date.now();
             
             // Relaxed check: Speed > 0.8 is "running". Allow digest if slower.
-            // Normal speed is 0.8, so digest only when walking/stopped (speed < 0.8).
             const currentSpeed = player.velocity.length();
             if (currentSpeed >= 0.8 || isBoost || dashState.active) {
                 showNotification("STOP TO DIGEST!");
@@ -1316,6 +1290,7 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
 
+        // --- GLOBAL UI FUNCTIONS ---
         window.toggleSettings = function() {
             const panel = document.getElementById('settings-panel');
             panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
@@ -1325,15 +1300,15 @@
             bgmAudio.volume = parseFloat(val);
         };
 
-        window.toggleMute = function() {
+        window.toggleSound = function() {
             bgmAudio.muted = !bgmAudio.muted;
-            const btn = document.getElementById('mute-btn');
+            const btn = document.getElementById('sound-toggle-btn');
             if(bgmAudio.muted) {
+                btn.innerText = "SOUND : OFF";
                 btn.classList.add('muted');
-                btn.innerText = "UNMUTE";
             } else {
+                btn.innerText = "SOUND : ON";
                 btn.classList.remove('muted');
-                btn.innerText = "MUTE";
             }
         };
 
@@ -1345,6 +1320,7 @@
             init3D();
             initFirebase();
             
+            // Try to play audio (requires user interaction first)
             bgmAudio.src = BGM_URL;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
