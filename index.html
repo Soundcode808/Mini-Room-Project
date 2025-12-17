@@ -159,6 +159,15 @@
         .skill-box.dash.ready .skill-svg { stroke: #ffaa00; filter: drop-shadow(0 0 5px #ffaa00); }
         .skill-box.dash.ready .skill-frame { background: rgba(80, 40, 0, 0.8); }
 
+        /* New Item Slot Style */
+        .skill-box.item-slot .skill-frame { background: rgba(30, 0, 40, 0.8); border-color: #aa00ff; }
+        .skill-box.item-slot.has-item .skill-svg { stroke: #ff00ff; filter: drop-shadow(0 0 8px #ff00ff); }
+        .skill-box.item-slot.has-item .skill-label { color: #fff; }
+        .skill-box.item-slot .skill-count {
+            position: absolute; top: 5px; right: 5px; z-index: 4;
+            font-size: 14px; color: #00ffff; font-weight: bold; text-shadow: 0 0 5px #000;
+        }
+
         .settings-btn {
             background: rgba(0, 20, 40, 0.8);
             border: 1px solid #00e5ff;
@@ -314,6 +323,18 @@
                     <span class="skill-label">Q</span>
                     <span class="skill-key">DIGEST</span>
                 </div>
+
+                <!-- New Item Slot (W) -->
+                <div id="skill-icon-w" class="skill-box item-slot">
+                    <svg class="skill-svg" viewBox="0 0 100 100">
+                        <path d="M50,10 L90,50 L50,90 L10,50 Z" vector-effect="non-scaling-stroke"/>
+                    </svg>
+                    <div class="skill-frame"></div>
+                    <div id="skill-overlay-w" class="skill-overlay"></div>
+                    <span id="item-label" class="skill-label">W</span>
+                    <span id="item-count" class="skill-count"></span>
+                    <span class="skill-key">ITEM</span>
+                </div>
                 
                 <div id="skill-icon-e" class="skill-box dash">
                     <svg class="skill-svg" viewBox="0 0 100 100">
@@ -337,7 +358,7 @@
         </div>
 
         <div class="controls-hint">
-            [MOUSE/SPACE] Boost > Max Speed > [E] Dash | [Q] Digest
+            [MOUSE/SPACE] Boost > Max Speed > [E] Dash | [Q] Digest | [W] Use Item
         </div>
         <div id="notification"></div>
     </div>
@@ -398,10 +419,10 @@
             worldSize: 600,
             camHeight: 150, 
             camOffset: 150, 
-            speed: 0.8, 
+            speed: 1.0, // Increased normal speed
             boostSpeed: 1.6, 
-            acceleration: 0.02, // Slower initial acceleration (Was 0.06)
-            friction: 0.992, // High inertia/sliding (Was 0.98)
+            acceleration: 0.02, 
+            friction: 0.992, 
             turnFriction: 0.92, 
             npcCount: 5,
             tailOverlap: 0.5, 
@@ -427,9 +448,14 @@
             staminaDrain: 30,
             
             // Popcorn / Combo Config
-            comboWindow: 20000, // 20 sec to chain
-            popcornDuration: 5000, // 5 sec effect
-            popcornSpawnRate: 0.1 // seconds
+            comboWindow: 20000, 
+            popcornDuration: 5000, 
+            popcornSpawnRate: 0.1,
+
+            // Item Config
+            itemSpawnInterval: 60000, // 1 minute (after use)
+            initialItemSpawnDelay: 30000, // 30 seconds (start)
+            itemTypes: ['speed', 'shield', 'energy', 'teleport']
         };
 
         let scene, camera, renderer, composer;
@@ -438,12 +464,24 @@
         let mouse = new THREE.Vector2();
         let raycaster = new THREE.Raycaster();
         let plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        let wallMaterial; // For changing wall color
+        let wallMaterial; 
         
         const cubes = [];
         const remotePlayers = {}; 
         const particles = [];
+        const projectiles = []; // Energy shots
         
+        // Item System Variables
+        let activeItemOnField = null; // Object { mesh, type }
+        let inventoryItem = null; // String (type)
+        let teleportState = { charges: 0, expire: 0 };
+        let nextItemSpawnTime = 0; // Timestamp
+        let activeItemEffects = {
+            speed: { active: false, endTime: 0 },
+            shield: { active: false, endTime: 0 },
+            energy: { active: false, endTime: 0, nextShot: 0 }
+        };
+
         let score = 0;
         let frameCount = 0;
         let isBoost = false;
@@ -471,9 +509,8 @@
         let jackpotPool = 0;
         let nextFeverTime = Date.now() + CONFIG.feverInterval;
 
-        // Combo & Popcorn Variables
         let comboCount = 0;
-        let comboTimer = 0; // Counts down from CONFIG.comboWindow
+        let comboTimer = 0; 
         let popcornMode = false;
         let popcornTimer = 0;
         let popcornSpawnTimer = 0;
@@ -517,6 +554,7 @@
             window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoost = false; });
 
             nextFeverTime = Date.now() + CONFIG.feverInterval;
+            nextItemSpawnTime = Date.now() + CONFIG.initialItemSpawnDelay;
 
             animate();
             updateHUD();
@@ -525,14 +563,11 @@
         function createEnvironment() {
             const size = CONFIG.worldSize;
 
-            // 1. Thick White Boundary (Walls) -> Cycling Color
             const wallThick = 2.0;
             const wallHeight = 8.0;
             const wallGeoH = new THREE.BoxGeometry(size + wallThick, wallHeight, wallThick);
             const wallGeoV = new THREE.BoxGeometry(wallThick, wallHeight, size + wallThick);
             
-            // Initial color, will be updated in animate()
-            // Modified to include transparency
             wallMaterial = new THREE.MeshBasicMaterial({ 
                 color: 0x2277aa,
                 transparent: true,
@@ -555,14 +590,11 @@
             wallRight.position.set(size/2, wallHeight/2, 0);
             scene.add(wallRight);
 
-            // 2. Central Cross (Visual Update)
-            // Thicker and Non-Fluorescent Sky Blue
-            const crossThick = 3.0; // Thicker than grid
+            const crossThick = 3.0; 
             const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
             const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
             
-            // Lambert Material for non-emissive/matte look
-            const crossMat = new THREE.MeshLambertMaterial({ color: 0x5599ff }); // Sky Blue
+            const crossMat = new THREE.MeshLambertMaterial({ color: 0x5599ff }); 
             
             const crossH = new THREE.Mesh(crossGeoH, crossMat);
             crossH.position.y = 0.5;
@@ -572,19 +604,14 @@
             crossV.position.y = 0.5;
             scene.add(crossV);
 
-            // 3. Middle Grid (Strong Blue)
-            // Slightly thicker visual (by color intensity/brightness since lineWidth is restricted)
             const gridMid = new THREE.GridHelper(size, 20, 0x0088ff, 0x0044cc);
             gridMid.position.y = 0.1;
             scene.add(gridMid);
 
-            // 4. Deep Abyss Grid (Composite: Mid + Small)
-            // Layer 1: Mimics the Middle Grid
             const gridDeepMid = new THREE.GridHelper(size, 20, 0x002266, 0x001133);
             gridDeepMid.position.y = -30;
             scene.add(gridDeepMid);
 
-            // Layer 2: Small Grid details
             const gridDeepSmall = new THREE.GridHelper(size * 1.5, 300, 0x001144, 0x000511);
             gridDeepSmall.position.y = -30;
             scene.add(gridDeepSmall);
@@ -737,6 +764,47 @@
             cubes.push({ mesh: mesh, rotateSpeed: -(Math.random() * 0.005 + 0.002) }); 
         }
 
+        function spawnItem() {
+            if (activeItemOnField || inventoryItem) return;
+
+            const range = CONFIG.worldSize / 2 * 0.8;
+            const x = (Math.random() - 0.5) * 2 * range;
+            const z = (Math.random() - 0.5) * 2 * range;
+            
+            const type = CONFIG.itemTypes[Math.floor(Math.random() * CONFIG.itemTypes.length)];
+            
+            const geometry = new THREE.OctahedronGeometry(4.0, 0);
+            const material = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, 5, z);
+            
+            // Inner Core
+            const coreGeo = new THREE.OctahedronGeometry(2.0, 0);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            mesh.add(core);
+
+            scene.add(mesh);
+            activeItemOnField = { mesh, type };
+            showNotification("MYSTERY ITEM SPAWNED!");
+        }
+
+        function spawnEnergyShot() {
+            const shotGeo = new THREE.SphereGeometry(1.5, 8, 8);
+            const shotMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const shot = new THREE.Mesh(shotGeo, shotMat);
+            
+            shot.position.copy(player.mesh.position);
+            shot.position.y = CONFIG.fixedY;
+            
+            // Direction based on velocity or forward vector if idle
+            let dir = player.velocity.clone().normalize();
+            if (dir.lengthSq() < 0.01) dir.set(0, 0, -1);
+
+            scene.add(shot);
+            projectiles.push({ mesh: shot, dir: dir, speed: 6.0, life: 3.0 }); 
+        }
+
         function createExplosion(pos, color, count=8) {
             for(let i=0; i<count; i++) {
                 const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
@@ -755,17 +823,15 @@
             if (e.code === 'Space') isBoost = true;
             if (e.code === 'KeyQ' || e.code === 'Keyq') activateSkill();
             if (e.code === 'KeyE' || e.code === 'Keye') activateDash();
+            if (e.code === 'KeyW' || e.code === 'Keyw') useItem();
         }
 
         function activateSkill() {
             const now = Date.now();
-            
-            // Allow Digest at normal speed. Only block during Boost or Dash.
             if (isBoost || dashState.active) {
                 showNotification("TOO FAST! (BOOST/DASH)");
                 return;
             }
-
             if (skillState.active) return;
             if (now < skillState.cooldownUntil) {
                 showNotification(`DIGEST CD: ${Math.ceil((skillState.cooldownUntil-now)/1000)}s`);
@@ -788,13 +854,11 @@
                 showNotification(`DASH CD: ${Math.ceil((dashState.cooldownUntil-now)/1000)}s`);
                 return;
             }
-            
             const currentSpeed = player.velocity.length();
             if (currentSpeed < CONFIG.boostSpeed * 0.9) { 
                 showNotification("NEED MAX SPEED!");
                 return;
             }
-
             dashState.active = true;
             dashState.endTime = now + CONFIG.dashDuration;
             dashState.cooldownUntil = now + CONFIG.dashCooldown;
@@ -806,7 +870,73 @@
             createExplosion(player.mesh.position, 0xffffff, 20); 
         }
 
+        function useItem() {
+            if (!inventoryItem) return;
+
+            const now = Date.now();
+            const type = inventoryItem;
+            let itemUsed = true;
+            
+            if (type === 'speed') {
+                activeItemEffects.speed.active = true;
+                activeItemEffects.speed.endTime = now + 10000; 
+                showNotification("SPEED UP! (10s)");
+            } else if (type === 'shield') {
+                activeItemEffects.shield.active = true;
+                activeItemEffects.shield.endTime = now + 20000; // Increased to 20s
+                showNotification("SHIELD ON! (20s)");
+            } else if (type === 'energy') {
+                // Activate Energy Mode
+                activeItemEffects.energy.active = true;
+                activeItemEffects.energy.endTime = now + 20000; // 20s
+                showNotification("ENERGY SHOTS ACTIVATED! (20s)");
+            } else if (type === 'teleport') {
+                // Initialize Teleport state if fresh
+                if (teleportState.expire === 0) {
+                    teleportState.charges = 5;
+                    teleportState.expire = now + 30000; // 30s validity
+                    showNotification("TELEPORT MODE: 5 CHARGES (30s)");
+                }
+
+                // Execute Teleport
+                let dir = player.velocity.clone().normalize();
+                if (dir.lengthSq() < 0.01) dir.set(0, 0, -1);
+                
+                const targetPos = player.mesh.position.clone().add(dir.multiplyScalar(200));
+                const limit = CONFIG.worldSize / 2;
+                targetPos.x = Math.max(-limit, Math.min(limit, targetPos.x));
+                targetPos.z = Math.max(-limit, Math.min(limit, targetPos.z));
+                
+                createExplosion(player.mesh.position, 0x00ffff, 20);
+                player.mesh.position.copy(targetPos);
+                createExplosion(player.mesh.position, 0x00ffff, 20);
+                
+                teleportState.charges--;
+                
+                // Only consume item if charges depleted
+                if (teleportState.charges > 0) {
+                    itemUsed = false;
+                    showNotification(`TELEPORT: ${teleportState.charges} LEFT`);
+                } else {
+                    showNotification("TELEPORT CHARGES DEPLETED");
+                }
+            }
+
+            if (itemUsed) {
+                inventoryItem = null;
+                teleportState = { charges: 0, expire: 0 };
+                // Regen timer start
+                nextItemSpawnTime = now + CONFIG.itemSpawnInterval; 
+            }
+            updateItemUI();
+        }
+
         function applyCollisionDebuff() {
+            if (activeItemEffects.shield.active) {
+                createExplosion(player.mesh.position, 0x0000ff, 5); 
+                return; 
+            }
+
             debuffState.active = true;
             debuffState.endTime = Date.now() + CONFIG.collisionDebuffTime;
             document.body.classList.add('glitch-active');
@@ -814,6 +944,8 @@
         }
 
         function scatterTails(entity, ratio = 0.5) {
+            if (entity === player && activeItemEffects.shield.active) return;
+
             const totalTails = entity.tailMeshes.length;
             if(totalTails === 0) return;
 
@@ -877,23 +1009,76 @@
 
             updateSkillUI(now);
             checkFeverTime(now);
+            updateItemEffects(now);
 
-            // Cycle Wall Color (Slower - 5x Slower)
+            // Check Teleport Expiry
+            if (inventoryItem === 'teleport' && teleportState.expire > 0 && now > teleportState.expire) {
+                inventoryItem = null;
+                teleportState = { charges: 0, expire: 0 };
+                nextItemSpawnTime = now + CONFIG.itemSpawnInterval;
+                showNotification("TELEPORT EXPIRED");
+                updateItemUI();
+            }
+
+            // Item Spawn Check
+            if (!activeItemOnField && !inventoryItem && now > nextItemSpawnTime) {
+                spawnItem();
+            }
+
+            // Animate Item on Field
+            if (activeItemOnField) {
+                activeItemOnField.mesh.rotation.y += 0.02;
+                activeItemOnField.mesh.rotation.z += 0.01;
+                activeItemOnField.mesh.position.y = 5 + Math.sin(now * 0.005) * 1.0;
+                
+                // Collision with player
+                if (player.mesh.position.distanceTo(activeItemOnField.mesh.position) < 8.0) {
+                    scene.remove(activeItemOnField.mesh);
+                    const type = activeItemOnField.type;
+                    activeItemOnField = null;
+                    
+                    inventoryItem = type;
+                    showNotification(`GOT ITEM: ${type.toUpperCase()}`);
+                    updateItemUI();
+                }
+            }
+
+            // Update Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.mesh.position.add(p.dir.clone().multiplyScalar(p.speed));
+                p.life -= deltaTime;
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+                
+                // NPC Collision with Projectile
+                for (let j = 0; j < npcs.length; j++) {
+                    if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
+                        createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
+                        const pushDir = p.dir.clone().normalize().multiplyScalar(5.0);
+                        npcs[j].velocity.add(pushDir);
+                        scene.remove(p.mesh);
+                        projectiles.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            // Cycle Wall Color
             if (wallMaterial) {
-                // Reduced speed factor from 0.0001 to 0.00002
                 const hue = (now * 0.00002) % 1;
                 wallMaterial.color.setHSL(hue, 0.7, 0.25);
             }
 
-            // Popcorn Logic (Fixed Physics)
+            // Popcorn Logic
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 popcornSpawnTimer += deltaTime;
-                // Faster spawn rate: 0.05s
                 if (popcornSpawnTimer > 0.05) {
-                    // Spawn multiple cubes for "Popcorn" effect
                     for(let k=0; k<2; k++) {
-                        // Adjusted velocity for better pop effect
                         const v = new THREE.Vector3(
                             (Math.random()-0.5) * 2.0, 
                             0.8 + Math.random() * 0.5, 
@@ -909,7 +1094,7 @@
                 }
             }
 
-            // Combo Timer Logic
+            // Combo Timer
             if (comboCount > 0) {
                 comboTimer -= deltaTime * 1000;
                 if (comboTimer <= 0) {
@@ -929,7 +1114,6 @@
             } else {
                 comboEl.classList.remove('active');
             }
-
 
             // Dash Logic
             if (dashState.active) {
@@ -952,6 +1136,7 @@
             }
 
             if (player) {
+                // Stamina Logic
                 if (isBoost && stats.stamina > 0) {
                     stats.stamina = Math.max(0, stats.stamina - CONFIG.staminaDrain * deltaTime);
                 } else {
@@ -959,14 +1144,14 @@
                     stats.stamina = Math.min(CONFIG.staminaMax, stats.stamina + CONFIG.staminaRegen * deltaTime);
                 }
 
+                // Boost Tail Drop
                 if (isBoost) {
                     stats.boostCostTimer += deltaTime;
                     if (stats.boostCostTimer >= 1.0) {
                         if (player.tailMeshes.length > 0) {
                             const tail = player.tailMeshes.pop();
-                            const tailPos = tail.position.clone(); // Capture position before removal
+                            const tailPos = tail.position.clone();
                             scene.remove(tail);
-                            // Spawn at tail position (behind player)
                             spawnCube({x: tailPos.x, z: tailPos.z}); 
                             updateHUD();
                         }
@@ -1034,8 +1219,7 @@
                         let turnFactor = 1.0;
                         if (dot < 0.5) turnFactor = CONFIG.turnFriction; 
 
-                        // Acceleration Logic (Normal vs Boost)
-                        const acc = isBoost ? CONFIG.acceleration * 1.5 : CONFIG.acceleration; // Boost heavy but strong
+                        let acc = isBoost ? CONFIG.acceleration * 1.5 : CONFIG.acceleration;
                         player.velocity.add(inputDir.multiplyScalar(acc));
                         player.velocity.multiplyScalar(turnFactor);
                     }
@@ -1043,7 +1227,11 @@
                 
                 if (!dashState.active) {
                     player.velocity.multiplyScalar(CONFIG.friction);
-                    const currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
+                    let currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
+                    
+                    // Apply Item Speed Buff
+                    if (activeItemEffects.speed.active) currentMaxSpeed *= 2.0;
+
                     if (player.velocity.length() > currentMaxSpeed) {
                         player.velocity.setLength(currentMaxSpeed);
                     }
@@ -1098,6 +1286,65 @@
             composer.render();
         }
 
+        function updateItemEffects(now) {
+            // Check Speed
+            if (activeItemEffects.speed.active && now > activeItemEffects.speed.endTime) {
+                activeItemEffects.speed.active = false;
+                showNotification("SPEED BUFF ENDED");
+            }
+            // Check Shield
+            if (activeItemEffects.shield.active) {
+                // Visual pulsing for shield
+                if (player) {
+                    const s = 1.0 + Math.sin(now * 0.01) * 0.3;
+                    player.mesh.userData.dist.scale.setScalar(s);
+                    player.mesh.userData.dist.material.color.setHex(0x00ffff);
+                }
+                if (now > activeItemEffects.shield.endTime) {
+                    activeItemEffects.shield.active = false;
+                    player.mesh.userData.dist.scale.setScalar(1);
+                    player.mesh.userData.dist.material.color.setHex(0xffffff);
+                    showNotification("SHIELD OFF");
+                }
+            }
+            // Check Energy Shots
+            if (activeItemEffects.energy.active) {
+                if (now > activeItemEffects.energy.endTime) {
+                    activeItemEffects.energy.active = false;
+                    showNotification("ENERGY SHOTS ENDED");
+                } else {
+                    if (now > activeItemEffects.energy.nextShot) {
+                        spawnEnergyShot();
+                        activeItemEffects.energy.nextShot = now + 200; // 0.2 sec
+                    }
+                }
+            }
+        }
+
+        function updateItemUI() {
+            const slot = document.getElementById('skill-icon-w');
+            const label = document.getElementById('item-label');
+            const countLabel = document.getElementById('item-count');
+            const overlay = document.getElementById('skill-overlay-w');
+            
+            if (inventoryItem) {
+                slot.classList.add('has-item');
+                label.innerText = inventoryItem.substring(0, 1).toUpperCase();
+                overlay.style.background = 'none';
+                
+                if (inventoryItem === 'teleport') {
+                    countLabel.innerText = teleportState.charges;
+                } else {
+                    countLabel.innerText = "";
+                }
+            } else {
+                slot.classList.remove('has-item');
+                label.innerText = "W";
+                countLabel.innerText = "";
+                overlay.style.background = 'rgba(0,0,0,0.5)';
+            }
+        }
+
         function updateNPCs() {
             npcs.forEach(npc => {
                 if (!npc.target || Math.random() < 0.02) { 
@@ -1144,15 +1391,16 @@
                 // Physics for popcorn cubes
                 if (c.mesh.userData.velocity) {
                     c.mesh.position.add(c.mesh.userData.velocity);
-                    c.mesh.userData.velocity.y -= 0.03; // Reduced Gravity (was 0.5)
+                    c.mesh.userData.velocity.y -= 0.03; 
                     if (c.mesh.position.y < CONFIG.fixedY) {
                         c.mesh.position.y = CONFIG.fixedY;
-                        c.mesh.userData.velocity.multiplyScalar(0.5); // Friction
+                        c.mesh.userData.velocity.multiplyScalar(0.5); 
                         c.mesh.userData.velocity.y = 0;
                     }
                 } else {
                      const dist = entity.mesh.position.distanceTo(c.mesh.position);
-                     if (dist < 30) {
+                     // Reduced radius from 30 to 25 (as requested)
+                     if (dist < 25) {
                         c.mesh.position.lerp(entity.mesh.position, 0.25);
                         c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
                     } else {
@@ -1177,7 +1425,7 @@
                     } else {
                         if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
                     }
-                    if (!popcornMode) spawnCube(); // Normal respawn
+                    if (!popcornMode) spawnCube(); 
                 }
             }
         }
@@ -1194,33 +1442,28 @@
                     collisionNormal.normalize();
 
                     if (dashState.active) {
-                        // Dash Hit: SUCCESS
                         const hitForce = collisionNormal.clone().multiplyScalar(-20.0);
                         npc.velocity.add(hitForce);
                         scatterTails(npc, 0.8);
                         createExplosion(npc.mesh.position, 0xff0000, 20);
                         showNotification("SMASH HIT!");
 
-                        // Combo Logic
                         comboCount++;
-                        comboTimer = CONFIG.comboWindow; // Reset timer to 10s
+                        comboTimer = CONFIG.comboWindow; 
                         
                         if (comboCount >= 3) {
                             triggerPopcorn(player.mesh.position);
-                            comboCount = 0; // Reset combo for next party
+                            comboCount = 0; 
                         }
 
                     } else {
-                        // Normal Collision: Fail
                         const force = 10.0; 
-                        
                         const playerBounce = collisionNormal.clone().multiplyScalar(force);
                         player.velocity.add(playerBounce);
                         
                         const npcBounce = collisionNormal.clone().multiplyScalar(-force);
                         npc.velocity.add(npcBounce);
                         
-                        // KNOCKBACK STUN
                         knockbackState.active = true;
                         knockbackState.endTime = Date.now() + 300; 
 
@@ -1230,7 +1473,6 @@
                         applyCollisionDebuff();
                         gainCP(0.0001); 
 
-                        // Reset Combo on fail
                         comboCount = 0;
                         comboTimer = 0;
                     }
