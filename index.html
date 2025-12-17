@@ -556,11 +556,12 @@
             scene.add(wallRight);
 
             // 2. Central Cross (Second Thickest) -> Thinner (0.6)
-            const crossThick = 0.6; // Reduced
+            // Changed material to Lambert for non-neon look
+            const crossThick = 0.6; 
             const crossGeoH = new THREE.BoxGeometry(size, 1, crossThick);
             const crossGeoV = new THREE.BoxGeometry(crossThick, 1, size);
-            // Bright Blue (0x3399ff)
-            const crossMat = new THREE.MeshBasicMaterial({ color: 0x3399ff }); 
+            // Non-emissive material, dark blue/slate color
+            const crossMat = new THREE.MeshLambertMaterial({ color: 0x335588 }); 
             
             const crossH = new THREE.Mesh(crossGeoH, crossMat);
             crossH.position.y = 0.5;
@@ -576,8 +577,8 @@
             scene.add(gridMid);
 
             // 4. Deep Abyss Grid (Dark Blue, Small, Parallax)
-            // Increased divisions to 300 for better parallax/perspective
-            const gridDeep = new THREE.GridHelper(size * 1.5, 300, 0x001144, 0x000511);
+            // Changed to Dark Blue: 0x000088 / 0x000044
+            const gridDeep = new THREE.GridHelper(size * 1.5, 300, 0x000088, 0x000044);
             gridDeep.position.y = -30;
             scene.add(gridDeep);
         }
@@ -870,14 +871,14 @@
             updateSkillUI(now);
             checkFeverTime(now);
 
-            // Cycle Wall Color
+            // Cycle Wall Color (Slower)
             if (wallMaterial) {
-                const hue = (now * 0.0001) % 1;
-                // Reduced lightness from 0.5 to 0.25 for dimmer look
+                // Reduced speed factor from 0.0001 to 0.00002
+                const hue = (now * 0.00002) % 1;
                 wallMaterial.color.setHSL(hue, 0.7, 0.25);
             }
 
-            // Popcorn Logic
+            // Popcorn Logic (Fixed Physics)
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 popcornSpawnTimer += deltaTime;
@@ -885,10 +886,11 @@
                 if (popcornSpawnTimer > 0.05) {
                     // Spawn multiple cubes for "Popcorn" effect
                     for(let k=0; k<2; k++) {
+                        // Adjusted velocity for better pop effect
                         const v = new THREE.Vector3(
-                            (Math.random()-0.5)*30, 
-                            20 + Math.random()*15, // Higher jump
-                            (Math.random()-0.5)*30
+                            (Math.random()-0.5) * 2.0, 
+                            0.8 + Math.random() * 0.5, 
+                            (Math.random()-0.5) * 2.0
                         );
                         spawnCube(player.mesh.position.clone(), v);
                     }
@@ -955,8 +957,10 @@
                     if (stats.boostCostTimer >= 1.0) {
                         if (player.tailMeshes.length > 0) {
                             const tail = player.tailMeshes.pop();
+                            const tailPos = tail.position.clone(); // Capture position before removal
                             scene.remove(tail);
-                            spawnCube({x: player.mesh.position.x, z: player.mesh.position.z}); 
+                            // Spawn at tail position (behind player)
+                            spawnCube({x: tailPos.x, z: tailPos.z}); 
                             updateHUD();
                         }
                         stats.boostCostTimer = 0;
@@ -1132,7 +1136,7 @@
                 // Physics for popcorn cubes
                 if (c.mesh.userData.velocity) {
                     c.mesh.position.add(c.mesh.userData.velocity);
-                    c.mesh.userData.velocity.y -= 0.5; // Gravity
+                    c.mesh.userData.velocity.y -= 0.03; // Reduced Gravity (was 0.5)
                     if (c.mesh.position.y < CONFIG.fixedY) {
                         c.mesh.position.y = CONFIG.fixedY;
                         c.mesh.userData.velocity.multiplyScalar(0.5); // Friction
