@@ -421,7 +421,7 @@
         
         let currentBgmIndex = 0;
         let bgmAudio = new Audio();
-        bgmAudio.loop = false; // Controlled manually by onended
+        bgmAudio.loop = false; 
         bgmAudio.volume = 0.5;
 
         // BGM Modes: 0=Sequential(🔁), 1=Random(🔀), 2=Single Loop(🔂)
@@ -468,6 +468,7 @@
         let db, auth, currentUser, myDocRef;
         let isOnline = false;
         let gameStartTime = 0; // Game Start Timestamp
+        let lastTime = Date.now(); // Global lastTime
 
         async function initFirebase() {
             if (!firebaseConfig) return;
@@ -498,12 +499,8 @@
             speed: 1.2, 
             boostSpeed: 3.0, 
             acceleration: 0.02, 
-            
-            // --- PHYSICS MODIFICATIONS ---
-            // Friction raised slightly from 0.998 to 0.990 for more control while maintaining drift
             friction: 0.990, 
             turnFriction: 0.96, 
-
             npcCount: 5,
             tailOverlap: 0.5, 
             tailSize: 3.5,
@@ -518,7 +515,7 @@
             digestInterval: 200, 
             dashSpeed: 6.0,
             dashDuration: 500, 
-            dashCooldown: 5000, // Reduced to 5s from 10s for better experience
+            dashCooldown: 7000, // Updated to 7s
             fixedY: 3.0,
             collisionDebuffTime: 3000,
             feverInterval: 300000,
@@ -526,15 +523,9 @@
             staminaMax: 100,
             staminaRegen: 15, 
             staminaDrain: 30,
-            
-            // --- INFINITE BOOST ---
             infiniteBoostDuration: 20000, // 20 Seconds
-
-            // Popcorn / Combo Config
             comboWindow: 20000, 
             popcornDuration: 5000, 
-            
-            // Item Config - Updated for circular respawn logic
             itemRespawnDelay: 10000, // 10 seconds respawn after use
             itemTypes: ['speed', 'shield', 'energy', 'teleport']
         };
@@ -550,19 +541,12 @@
         const cubes = [];
         const remotePlayers = {}; 
         const particles = [];
-        const projectiles = []; // Energy shots
+        const projectiles = []; 
         
-        // Item System Variables
-        const activeItemsOnField = []; // Array to hold multiple field items
-        let inventoryItem = null; // String (type)
+        const activeItemsOnField = []; 
+        let inventoryItem = null; 
         let teleportState = { charges: 0, expire: 0 };
-        // Track next spawn time for EACH type
-        let itemRespawnTimers = {
-            speed: 0,
-            shield: 0,
-            energy: 0,
-            teleport: 0
-        };
+        let itemRespawnTimers = { speed: 0, shield: 0, energy: 0, teleport: 0 };
 
         let activeItemEffects = {
             speed: { active: false, endTime: 0 },
@@ -602,56 +586,10 @@
         let popcornMode = false;
         let popcornTimer = 0;
 
-        function init3D() {
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x050510, 0.0015);
-
-            camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 2000);
-            camera.rotation.order = 'YXZ'; 
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-            document.body.appendChild(renderer.domElement);
-
-            const renderScene = new RenderPass(scene, camera);
-            
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0; 
-            bloomPass.strength = 2.5; 
-            bloomPass.radius = 0.8;
-            
-            composer = new EffectComposer(renderer);
-            composer.addPass(renderScene);
-            composer.addPass(bloomPass);
-
-            const ambient = new THREE.AmbientLight(0x404040, 2.0); 
-            scene.add(ambient);
-            
-            createEnvironment();
-            createPlayer();
-            for(let i=0; i<CONFIG.npcCount; i++) createNPC();
-            for(let i=0; i<CONFIG.cubeCount; i++) spawnCube();
-
-            window.addEventListener('resize', onResize);
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mousedown', () => { isBoost = true; });
-            window.addEventListener('mouseup', () => { isBoost = false; });
-            window.addEventListener('keydown', handleKeyDown);
-            window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoost = false; });
-
-            nextFeverTime = Date.now() + CONFIG.feverInterval;
-            
-            // Initial Item Spawn (One of each type at start)
-            CONFIG.itemTypes.forEach(type => spawnItem(type));
-
-            animate();
-            updateHUD();
-        }
+        // --- HELPER FUNCTIONS DEFINED FIRST TO AVOID HOISTING ISSUES ---
 
         function createEnvironment() {
             const size = CONFIG.worldSize;
-
             const wallThick = 2.0;
             const wallHeight = 8.0;
             const wallGeoH = new THREE.BoxGeometry(size + wallThick, wallHeight, wallThick);
@@ -706,7 +644,6 @@
             ring.position.y = 0.2;
             scene.add(ring);
             
-            // Text for Fever Zone (Simplified using torus as marker)
             const zoneMarkerGeo = new THREE.TorusGeometry(32, 0.5, 16, 100);
             const zoneMarkerMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
             const zoneMarker = new THREE.Mesh(zoneMarkerGeo, zoneMarkerMat);
@@ -741,7 +678,6 @@
 
         function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff) {
             const group = new THREE.Group();
-
             const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
             const outerMesh = createWireframeMesh(outerGeo, color);
             group.add(outerMesh);
@@ -770,7 +706,6 @@
             const coreGeo = new THREE.SphereGeometry(1.2, 32, 32); 
             const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-            
             const light = new THREE.PointLight(coreColor, 10, 50); 
             coreMesh.add(light);
             group.add(coreMesh);
@@ -783,7 +718,6 @@
                 baseColor: new THREE.Color(color),
                 rotSpeed: 0.02
             };
-
             return group;
         }
 
@@ -868,7 +802,7 @@
                 points: config.points, 
                 color: config.color,
                 floatOffset: Math.random() * Math.PI * 2,
-                velocity: velOverride // For popcorn/fever cubes
+                velocity: velOverride 
             };
             scene.add(mesh);
             cubes.push({ mesh: mesh, rotateSpeed: -(Math.random() * 0.005 + 0.002) }); 
@@ -876,15 +810,13 @@
 
         function spawnItem(typeOverride) {
             const type = typeOverride;
-            
             const range = CONFIG.worldSize / 2 * 0.8;
             const x = (Math.random() - 0.5) * 2 * range;
             const z = (Math.random() - 0.5) * 2 * range;
             
             const geometry = new THREE.OctahedronGeometry(4.0, 0);
             
-            // Distinct Colors for items
-            let color = 0xff00ff; // Default
+            let color = 0xff00ff; 
             if (type === 'speed') color = 0x00ffff;
             if (type === 'shield') color = 0x0000ff;
             if (type === 'energy') color = 0xffaa00;
@@ -894,7 +826,6 @@
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(x, 5, z);
             
-            // Inner Core
             const coreGeo = new THREE.OctahedronGeometry(2.0, 0);
             const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const core = new THREE.Mesh(coreGeo, coreMat);
@@ -913,7 +844,6 @@
             shot.position.copy(player.mesh.position);
             shot.position.y = CONFIG.fixedY;
             
-            // Direction based on velocity or forward vector if idle
             let dir = player.velocity.clone().normalize();
             if (dir.lengthSq() < 0.01) dir.set(0, 0, -1);
 
@@ -937,9 +867,9 @@
 
         function handleKeyDown(e) {
             if (e.code === 'Space') isBoost = true;
-            if (e.code === 'KeyQ') activateSkill();
-            if (e.code === 'KeyE') activateDash();
-            if (e.code === 'KeyW') useItem();
+            if (e.code === 'KeyQ' || e.code === 'Keyq') activateSkill();
+            if (e.code === 'KeyE' || e.code === 'Keye') activateDash();
+            if (e.code === 'KeyW' || e.code === 'Keyw') useItem();
         }
 
         function activateSkill() {
@@ -971,8 +901,7 @@
                 return;
             }
             const currentSpeed = player.velocity.length();
-            // Adjusted threshold: 0.5 to make Dash much easier to activate
-            if (currentSpeed < 0.5) { 
+            if (currentSpeed < 0.1) { 
                 showNotification("NEED SPEED!");
                 return;
             }
@@ -994,7 +923,6 @@
             const type = inventoryItem;
             let itemUsed = true;
             
-            // Activate Effects
             if (type === 'speed') {
                 activeItemEffects.speed.active = true;
                 activeItemEffects.speed.endTime = now + 10000; 
@@ -1035,9 +963,7 @@
             }
 
             if (itemUsed) {
-                // Schedule Respawn for this specific item type
                 itemRespawnTimers[type] = now + CONFIG.itemRespawnDelay;
-                
                 inventoryItem = null;
                 teleportState = { charges: 0, expire: 0 };
             }
@@ -1089,7 +1015,7 @@
 
         function checkFeverTime(now) {
             if (now >= nextFeverTime) {
-                triggerFeverTime(); // 100% Chance
+                triggerFeverTime(); 
                 nextFeverTime = now + CONFIG.feverInterval;
             }
             const remaining = Math.max(0, nextFeverTime - now);
@@ -1102,22 +1028,16 @@
         function triggerFeverTime() {
             showNotification("FEVER TIME! CENTER EXPLOSION!");
             const count = Math.floor(jackpotPool / 20); 
-            
-            // Center Explosion Logic
             const center = new THREE.Vector3(0, CONFIG.fixedY, 0);
-            
             for(let i=0; i<count; i++) {
-                // Velocity spreading out from center
                 const angle = Math.random() * Math.PI * 2;
-                const speed = 2.0 + Math.random() * 5.0; // Explosion speed
+                const speed = 2.0 + Math.random() * 5.0;
                 const vx = Math.cos(angle) * speed;
                 const vz = Math.sin(angle) * speed;
-                
                 spawnCube(center.clone(), new THREE.Vector3(vx, 5.0 + Math.random() * 5.0, vz));
             }
-            
             jackpotPool = 0;
-            createExplosion(center, 0xffaa00, 50); // Visual FX
+            createExplosion(center, 0xffaa00, 50); 
         }
 
         function triggerPopcorn(pos) {
@@ -1126,16 +1046,12 @@
             showNotification("POPCORN PARTY STARTED!");
         }
 
-        // Added missing updateItemEffects function definition BEFORE animate
         function updateItemEffects(now) {
-            // Check Speed
             if (activeItemEffects.speed.active && now > activeItemEffects.speed.endTime) {
                 activeItemEffects.speed.active = false;
                 showNotification("SPEED BUFF ENDED");
             }
-            // Check Shield
             if (activeItemEffects.shield.active) {
-                // Visual pulsing for shield
                 if (player) {
                     const s = 1.0 + Math.sin(now * 0.01) * 0.3;
                     player.mesh.userData.dist.scale.setScalar(s);
@@ -1148,7 +1064,6 @@
                     showNotification("SHIELD OFF");
                 }
             }
-            // Check Energy Shots
             if (activeItemEffects.energy.active) {
                 if (now > activeItemEffects.energy.endTime) {
                     activeItemEffects.energy.active = false;
@@ -1156,7 +1071,7 @@
                 } else {
                     if (now > activeItemEffects.energy.nextShot) {
                         spawnEnergyShot();
-                        activeItemEffects.energy.nextShot = now + 200; // 0.2 sec
+                        activeItemEffects.energy.nextShot = now + 200; 
                     }
                 }
             }
@@ -1229,7 +1144,6 @@
                 const c = cubes[i];
                 c.mesh.rotation.y += c.rotateSpeed;
 
-                // Physics for popcorn cubes
                 if (c.mesh.userData.velocity) {
                     c.mesh.position.add(c.mesh.userData.velocity);
                     c.mesh.userData.velocity.y -= 0.03; 
@@ -1292,7 +1206,6 @@
                         comboTimer = CONFIG.comboWindow; 
                         
                         if (comboCount >= 3) {
-                            // 3-Combo Reward Change: Reduce Fever Wait by 30s
                             nextFeverTime -= 30000;
                             showNotification("FEVER TIME -30s!");
                             createExplosion(player.mesh.position, 0xffaa00, 30);
@@ -1389,7 +1302,6 @@
         }
 
         function updateSkillUI(now) {
-            // Q Skill
             const iconQ = document.getElementById('skill-icon-q');
             const overlayQ = document.getElementById('skill-overlay-q');
             
@@ -1409,11 +1321,10 @@
                 }
             }
 
-            // E Skill
             const iconE = document.getElementById('skill-icon-e');
             const overlayE = document.getElementById('skill-overlay-e');
             
-            const canDash = player && player.velocity.length() > CONFIG.boostSpeed * 0.9;
+            const canDash = player && player.velocity.length() > 0.1; 
             
             if (!dashState.active && now > dashState.cooldownUntil && canDash) {
                 iconE.classList.add('ready');
@@ -1540,7 +1451,6 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
 
-        let lastTime = Date.now();
         function animate() {
             requestAnimationFrame(animate);
             frameCount++;
@@ -1558,7 +1468,6 @@
                 teleportState = { charges: 0, expire: 0 };
                 showNotification("TELEPORT EXPIRED");
                 updateItemUI();
-                // Expired item also respawns
                 itemRespawnTimers['teleport'] = now + CONFIG.itemRespawnDelay;
             }
 
@@ -1566,7 +1475,7 @@
             for (const [type, respawnTime] of Object.entries(itemRespawnTimers)) {
                 if (respawnTime > 0 && now > respawnTime) {
                     spawnItem(type);
-                    itemRespawnTimers[type] = 0; // Reset timer
+                    itemRespawnTimers[type] = 0; 
                 }
             }
 
@@ -1603,7 +1512,6 @@
                     continue;
                 }
                 
-                // NPC Collision with Projectile
                 for (let j = 0; j < npcs.length; j++) {
                     if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
                         createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
@@ -1616,13 +1524,11 @@
                 }
             }
 
-            // Cycle Wall Color
             if (wallMaterial) {
                 const hue = (now * 0.00002) % 1;
                 wallMaterial.color.setHSL(hue, 0.7, 0.25);
             }
 
-            // Popcorn Logic (Visuals only now if triggered by collision)
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 if (popcornTimer <= 0) {
@@ -1630,7 +1536,6 @@
                 }
             }
 
-            // Combo Timer
             if (comboCount > 0) {
                 comboTimer -= deltaTime * 1000;
                 if (comboTimer <= 0) {
@@ -1651,7 +1556,6 @@
                 comboEl.classList.remove('active');
             }
 
-            // Dash Logic
             if (dashState.active) {
                 if (now > dashState.endTime) {
                     dashState.active = false;
@@ -1672,7 +1576,6 @@
             }
 
             if (player) {
-                // Stamina Logic (Updated for Infinite Boost)
                 const isInfiniteBoost = (now - gameStartTime) < CONFIG.infiniteBoostDuration;
                 
                 if (isBoost && stats.stamina > 0) {
@@ -1684,14 +1587,13 @@
                     stats.stamina = Math.min(CONFIG.staminaMax, stats.stamina + CONFIG.staminaRegen * deltaTime);
                 }
 
-                // Stamina UI Color Update
                 const stmBar = document.getElementById('stamina-fill');
                 const stmLabel = document.getElementById('stm-label');
                 const stmPct = (stats.stamina / CONFIG.staminaMax) * 100;
                 stmBar.style.width = `${stmPct}%`;
                 
                 if (isInfiniteBoost) {
-                    stmBar.style.background = '#d000ff'; // Purple for infinite
+                    stmBar.style.background = '#d000ff'; 
                     stmBar.style.boxShadow = '0 0 8px #d000ff';
                     stmLabel.innerText = "NO LIMIT";
                     stmLabel.style.color = '#d000ff';
@@ -1702,7 +1604,6 @@
                     stmLabel.style.color = '#00ff88';
                 }
 
-                // Boost Tail Drop
                 if (isBoost) {
                     stats.boostCostTimer += deltaTime;
                     if (stats.boostCostTimer >= 1.0) {
@@ -1787,7 +1688,6 @@
                     player.velocity.multiplyScalar(CONFIG.friction);
                     let currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
                     
-                    // Apply Item Speed Buff
                     if (activeItemEffects.speed.active) currentMaxSpeed *= 2.0;
 
                     if (player.velocity.length() > currentMaxSpeed) {
@@ -1840,6 +1740,53 @@
 
             composer.render();
         }
+        
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050510, 0.0015);
+
+            camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 2000);
+            camera.rotation.order = 'YXZ'; 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            document.body.appendChild(renderer.domElement);
+
+            const renderScene = new RenderPass(scene, camera);
+            
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0; 
+            bloomPass.strength = 2.5; 
+            bloomPass.radius = 0.8;
+            
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            const ambient = new THREE.AmbientLight(0x404040, 2.0); 
+            scene.add(ambient);
+            
+            createEnvironment();
+            createPlayer();
+            for(let i=0; i<CONFIG.npcCount; i++) createNPC();
+            for(let i=0; i<CONFIG.cubeCount; i++) spawnCube();
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mousedown', () => { isBoost = true; });
+            window.addEventListener('mouseup', () => { isBoost = false; });
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', (e) => { if(e.code === 'Space') isBoost = false; });
+
+            nextFeverTime = Date.now() + CONFIG.feverInterval;
+            
+            // Initial Item Spawn (One of each type at start)
+            CONFIG.itemTypes.forEach(type => spawnItem(type));
+
+            animate();
+            updateHUD();
+        }
 
         // --- GLOBAL UI FUNCTIONS ---
         window.toggleSettings = function() {
@@ -1871,10 +1818,6 @@
 
             const bgm = BGM_LIST[currentBgmIndex];
             document.getElementById('bgm-label').innerText = bgm.name;
-
-            // Play new BGM if sound is not muted or paused manually (here assume always loop)
-            // But check if audio was already playing to decide whether to auto-play new track
-            // Actually for background music, we usually want it to just switch.
             
             const wasPlaying = !bgmAudio.paused;
             bgmAudio.src = bgm.url;
@@ -1890,15 +1833,14 @@
             const iconEl = document.getElementById('bgm-mode-icon');
             
             iconEl.innerText = mode.icon;
-            iconEl.title = mode.label; // Tooltip for clarity
+            iconEl.title = mode.label; 
             
             showNotification(`BGM MODE: ${mode.label.toUpperCase()}`);
             
-            // Adjust loop property immediately
-            if (bgmMode === 2) { // Single Repeat
+            if (bgmMode === 2) { 
                 bgmAudio.loop = true;
             } else {
-                bgmAudio.loop = false; // Let 'ended' event handle logic
+                bgmAudio.loop = false; 
             }
         };
 
@@ -1907,14 +1849,11 @@
             document.getElementById('login-overlay').style.display = 'none';
             if(player) player.username = username;
             
-            // Set Game Start Time for Infinite Boost Logic
             gameStartTime = Date.now();
 
             init3D();
             initFirebase();
             
-            // Try to play audio (requires user interaction first)
-            // Use current selected BGM
             bgmAudio.src = BGM_LIST[currentBgmIndex].url;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
