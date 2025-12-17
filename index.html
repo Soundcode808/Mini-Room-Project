@@ -419,10 +419,10 @@
             worldSize: 600,
             camHeight: 150, 
             camOffset: 150, 
-            speed: 1.0, // Increased normal speed
-            boostSpeed: 1.6, 
+            speed: 1.2, // Increased normal speed
+            boostSpeed: 3.0, // Increased boost speed for max inertia/drift
             acceleration: 0.02, 
-            friction: 0.992, 
+            friction: 0.995, // High inertia (drifting feeling)
             turnFriction: 0.92, 
             npcCount: 5,
             tailOverlap: 0.5, 
@@ -453,8 +453,8 @@
             popcornSpawnRate: 0.1,
 
             // Item Config
-            itemSpawnInterval: 60000, // 1 minute (after use)
-            initialItemSpawnDelay: 30000, // 30 seconds (start)
+            itemSpawnInterval: 60000, // 1 minute
+            initialItemSpawnDelay: 30000, // 30 seconds
             itemTypes: ['speed', 'shield', 'energy', 'teleport']
         };
 
@@ -472,7 +472,7 @@
         const projectiles = []; // Energy shots
         
         // Item System Variables
-        let activeItemOnField = null; // Object { mesh, type }
+        const activeItemsOnField = []; // Array to hold multiple field items
         let inventoryItem = null; // String (type)
         let teleportState = { charges: 0, expire: 0 };
         let nextItemSpawnTime = 0; // Timestamp
@@ -765,13 +765,17 @@
         }
 
         function spawnItem() {
-            if (activeItemOnField || inventoryItem) return;
+            // Check availability - Spawn if type is not already on field
+            const existingTypes = activeItemsOnField.map(item => item.type);
+            const availableTypes = CONFIG.itemTypes.filter(type => !existingTypes.includes(type));
 
+            if (availableTypes.length === 0) return; // All items are on field
+
+            const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+            
             const range = CONFIG.worldSize / 2 * 0.8;
             const x = (Math.random() - 0.5) * 2 * range;
             const z = (Math.random() - 0.5) * 2 * range;
-            
-            const type = CONFIG.itemTypes[Math.floor(Math.random() * CONFIG.itemTypes.length)];
             
             const geometry = new THREE.OctahedronGeometry(4.0, 0);
             const material = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true });
@@ -785,8 +789,11 @@
             mesh.add(core);
 
             scene.add(mesh);
-            activeItemOnField = { mesh, type };
-            showNotification("MYSTERY ITEM SPAWNED!");
+            activeItemsOnField.push({ mesh, type });
+            showNotification(`ITEM APPEARED: ${type.toUpperCase()}`);
+            
+            // Set next spawn time regardless of pickup
+            nextItemSpawnTime = Date.now() + CONFIG.itemSpawnInterval;
         }
 
         function spawnEnergyShot() {
@@ -925,8 +932,6 @@
             if (itemUsed) {
                 inventoryItem = null;
                 teleportState = { charges: 0, expire: 0 };
-                // Regen timer start
-                nextItemSpawnTime = now + CONFIG.itemSpawnInterval; 
             }
             updateItemUI();
         }
@@ -1015,31 +1020,36 @@
             if (inventoryItem === 'teleport' && teleportState.expire > 0 && now > teleportState.expire) {
                 inventoryItem = null;
                 teleportState = { charges: 0, expire: 0 };
-                nextItemSpawnTime = now + CONFIG.itemSpawnInterval;
                 showNotification("TELEPORT EXPIRED");
                 updateItemUI();
             }
 
             // Item Spawn Check
-            if (!activeItemOnField && !inventoryItem && now > nextItemSpawnTime) {
+            if (now > nextItemSpawnTime) {
                 spawnItem();
             }
 
-            // Animate Item on Field
-            if (activeItemOnField) {
-                activeItemOnField.mesh.rotation.y += 0.02;
-                activeItemOnField.mesh.rotation.z += 0.01;
-                activeItemOnField.mesh.position.y = 5 + Math.sin(now * 0.005) * 1.0;
+            // Animate Items on Field
+            for (let i = activeItemsOnField.length - 1; i >= 0; i--) {
+                const item = activeItemsOnField[i];
+                item.mesh.rotation.y += 0.02;
+                item.mesh.rotation.z += 0.01;
+                item.mesh.position.y = 5 + Math.sin(now * 0.005) * 1.0;
                 
                 // Collision with player
-                if (player.mesh.position.distanceTo(activeItemOnField.mesh.position) < 8.0) {
-                    scene.remove(activeItemOnField.mesh);
-                    const type = activeItemOnField.type;
-                    activeItemOnField = null;
-                    
-                    inventoryItem = type;
-                    showNotification(`GOT ITEM: ${type.toUpperCase()}`);
-                    updateItemUI();
+                if (player.mesh.position.distanceTo(item.mesh.position) < 8.0) {
+                    // Pick up logic
+                    if (inventoryItem) {
+                        // Inventory full, can't pick up (Optional: swap or ignore)
+                        // For now, ignore
+                    } else {
+                        scene.remove(item.mesh);
+                        activeItemsOnField.splice(i, 1);
+                        
+                        inventoryItem = item.type;
+                        showNotification(`GOT ITEM: ${item.type.toUpperCase()}`);
+                        updateItemUI();
+                    }
                 }
             }
 
