@@ -14,14 +14,23 @@
             user-select: none;
         }
 
+        /* UI Layers */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
             padding: 20px; box-sizing: border-box;
             display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
         }
 
-        /* Top Center (Fever & Combo & Timer) */
+        #nametag-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5; /* Behind UI, On top of 3D */
+            overflow: hidden;
+        }
+
+        /* Top Center */
         .hud-top-center {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center;
@@ -40,7 +49,6 @@
         .fever-timer { font-size: 20px; font-weight: 900; }
         .jackpot-val { color: #fff; font-size: 12px; margin-top: 2px; }
 
-        /* Game Timer Style */
         .game-timer-box {
             margin-top: 5px;
             color: #ffffff;
@@ -233,23 +241,25 @@
         #bgm-label { min-width: 50px; text-align: center; color: #00e5ff; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         #bgm-mode-icon { font-size: 16px; margin-left: 5px; cursor: pointer; }
 
-        /* Name Tag Style */
+        /* Name Tag Style (Improved) */
         .name-tag {
             position: absolute;
             top: 0; left: 0;
             color: #ffffff;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
+            background: rgba(0, 0, 0, 0.85); /* Darker background */
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 900;
             pointer-events: none;
-            text-shadow: 0 0 5px #000;
+            text-shadow: 0 0 5px #00e5ff;
             border: 2px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
             white-space: nowrap;
             will-change: transform;
-            transform: translate(-50%, -150%); /* Center above head */
-            z-index: 100;
+            /* Initially hidden, shown by update loop */
+            display: none; 
+            z-index: 1000;
         }
 
         .controls-hint {
@@ -348,6 +358,9 @@
     </div>
 
     <div id="ui-layer">
+        <!-- Separate Layer for Name Tags -->
+        <div id="nametag-layer"></div>
+
         <div class="hud-top-center">
             <div class="fever-box">
                 <div class="fever-title">NEXT FEVER CHANCE</div>
@@ -481,9 +494,6 @@
             { name: "BGM 13", url: "https://raw.githubusercontent.com/Soundcode808/Mini-Room-Project/main/BGM13.mp3" }
         ];
         
-        // NPC Name Pool
-        const NPC_NAMES = ["Bot Alpha", "Bot Beta", "Bot Gamma", "Bot Delta", "Bot Omega", "Bot Zeta", "Bot Sigma", "Bot Theta"];
-
         let currentBgmIndex = 0;
         let bgmAudio = new Audio();
         bgmAudio.loop = false; 
@@ -531,7 +541,6 @@
         let lastTime = Date.now();
         let animationFrameId;
         let isGameOver = false;
-        // Network Optimization Variables
         let lastNetworkUpdate = 0;
         const NETWORK_TICK_RATE = 100; // 100ms = 10 updates/sec
 
@@ -566,7 +575,7 @@
             acceleration: 0.02, 
             friction: 0.990, 
             turnFriction: 0.96, 
-            npcCount: 0,
+            npcCount: 0, 
             tailOverlap: 0.5, 
             tailSize: 3.5,
             cubes: {
@@ -660,7 +669,8 @@
             const div = document.createElement('div');
             div.className = 'name-tag';
             div.innerText = name;
-            document.getElementById('ui-layer').appendChild(div);
+            // Append to the specialized nametag layer
+            document.getElementById('nametag-layer').appendChild(div);
             return div;
         }
 
@@ -758,7 +768,7 @@
                 const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
                 const outerMesh = createWireframeMesh(outerGeo, color);
                 group.add(outerMesh);
-                group.userData.outer = outerMesh; // Save reference
+                group.userData.outer = outerMesh; 
             }
 
             const midGeo = new THREE.IcosahedronGeometry(2.2, 1);
@@ -789,12 +799,13 @@
             coreMesh.add(light);
             group.add(coreMesh);
 
-            // Assign base props
-            group.userData.mid = midMesh;
-            group.userData.core = coreMesh;
-            group.userData.dist = distMesh;
-            group.userData.baseColor = new THREE.Color(color);
-            group.userData.rotSpeed = 0.02;
+            group.userData = {
+                mid: midMesh,
+                core: coreMesh,
+                dist: distMesh,
+                baseColor: new THREE.Color(color),
+                rotSpeed: 0.02
+            };
 
             return group;
         }
@@ -822,43 +833,28 @@
                 tailMeshes: [],
                 color: 0x00ffff,
                 username: "Player",
-                nameTag: null // Will be assigned in startGame
+                nameTag: null 
             };
         }
 
         function createNPC() {
-            const mesh = createPlayerMesh(0xff8800, 0xffaa00, false); // No Grid for NPC
-            mesh.position.y = CONFIG.fixedY;
-            const range = CONFIG.worldSize / 2;
-            mesh.position.x = (Math.random() - 0.5) * range;
-            mesh.position.z = (Math.random() - 0.5) * range;
-            scene.add(mesh);
-            
-            const name = NPC_NAMES[Math.floor(Math.random() * NPC_NAMES.length)];
-            const nameTag = createNameTag(name);
-
-            npcs.push({
-                mesh: mesh,
-                velocity: new THREE.Vector3(),
-                path: [],
-                tailMeshes: [],
-                target: null,
-                speed: CONFIG.speed * 0.8,
-                changeTargetTime: 0,
-                name: name,
-                score: 0,
-                nameTag: nameTag
-            });
+            // Disabled NPCs as per user request
         }
 
         function createRemotePlayer(id, data) {
             const mesh = createPlayerMesh(); 
             mesh.position.y = CONFIG.fixedY;
             scene.add(mesh);
+            // We assume name passed in data, otherwise default
+            const name = data.username || "Unknown";
+            const nameTag = createNameTag(name);
+            
             return {
                 mesh: mesh,
                 tailMeshes: [],
-                targetPos: new THREE.Vector3(data.x || 0, CONFIG.fixedY, data.y || 0)
+                targetPos: new THREE.Vector3(data.x || 0, CONFIG.fixedY, data.y || 0),
+                nameTag: nameTag,
+                name: name
             };
         }
 
@@ -1075,8 +1071,9 @@
         }
 
         function scatterTails(entity, ratio = 0.5) {
-            if (entity === player && activeItemEffects.shield.active) return;
-
+            // Note: Since remotePlayers tails are just visual copies, this effect is purely visual for them
+            // unless we have server authority. For local player, it removes real tails.
+            
             const totalTails = entity.tailMeshes.length;
             if(totalTails === 0) return;
 
@@ -1101,7 +1098,7 @@
                     }
                 }
             }
-
+            
             if(entity === player) updateHUD();
         }
 
@@ -1118,7 +1115,6 @@
         }
 
         function triggerFeverTime() {
-            // Jackpot Pool + 50% of Field Cubes
             const fieldBonus = Math.floor(cubes.length * 0.5);
             const jackpotCount = Math.floor(jackpotPool / 20); 
             const totalCount = jackpotCount + fieldBonus;
@@ -1127,9 +1123,8 @@
             createExplosion(center, 0xffaa00, 50);
 
             for(let i=0; i<totalCount; i++) {
-                // Radial Explosion
                 const angle = (i / totalCount) * Math.PI * 2;
-                const speed = CONFIG.boostSpeed * 2.0 + Math.random() * 2.0; // High speed
+                const speed = CONFIG.boostSpeed * 2.0 + Math.random() * 2.0; 
                 
                 const vx = Math.cos(angle) * speed;
                 const vz = Math.sin(angle) * speed;
@@ -1206,7 +1201,7 @@
             if(!entity.nameTag || !entity.mesh) return;
             const tempV = new THREE.Vector3();
             tempV.copy(entity.mesh.position);
-            tempV.y += 15; // Raised height for better visibility
+            tempV.y += 8; // Raised height for better visibility
 
             tempV.project(camera);
 
@@ -1242,7 +1237,6 @@
                 npc.mesh.position.x = Math.max(-limit, Math.min(limit, npc.mesh.position.x));
                 npc.mesh.position.z = Math.max(-limit, Math.min(limit, npc.mesh.position.z));
                 
-                // Safe rotation check for NPC (no outerMesh)
                 if(npc.mesh.userData.outer) {
                      npc.mesh.userData.outer.rotation.y += 0.02;
                 }
@@ -1289,7 +1283,6 @@
                     scene.remove(c.mesh);
                     cubes.splice(i, 1);
                     
-                    // Add Score logic for Player & NPCs
                     if (entity === player) {
                         const type = c.mesh.userData.type;
                         score += c.mesh.userData.points;
@@ -1299,12 +1292,11 @@
                             eatenCounts[type] = 0; 
                         }
                         updateHUD();
-                    } else if (entity.score !== undefined) { // Is NPC
+                    } else if (entity.score !== undefined) { 
                         const type = c.mesh.userData.type;
                         entity.score += c.mesh.userData.points;
                         if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
                     } else {
-                        // Remote player visual only
                         if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
                     }
 
@@ -1314,6 +1306,35 @@
         }
 
         function checkEntityCollisions() {
+            // Check Remote Players Collision (PvP)
+            Object.values(remotePlayers).forEach(rp => {
+                const dist = player.mesh.position.distanceTo(rp.mesh.position);
+                if (dist < 8.0) {
+                     const midPoint = new THREE.Vector3().addVectors(player.mesh.position, rp.mesh.position).multiplyScalar(0.5);
+                     createExplosion(midPoint, 0xffffff, 15);
+                     
+                     const collisionNormal = new THREE.Vector3().subVectors(player.mesh.position, rp.mesh.position);
+                     collisionNormal.y = 0;
+                     collisionNormal.normalize();
+                     
+                     // PvP Logic: Both bounce & lose tails
+                     const force = 10.0;
+                     player.velocity.add(collisionNormal.clone().multiplyScalar(force));
+                     
+                     // Shield Bonus
+                     if (activeItemEffects.shield.active) {
+                         scatterTails(rp, 0.3); // Shield drops 30%
+                         showNotification("PVP: SHIELD SMASH!");
+                     } else {
+                         // Default PVP impact
+                         applyCollisionDebuff(); // Self debuff
+                         scatterTails(player, 0.1); // Self drops 10%
+                         scatterTails(rp, 0.1); // Opponent visually drops 10%
+                     }
+                }
+            });
+            
+            // Check NPCs Collision (Legacy if any)
             npcs.forEach(npc => {
                 const dist = player.mesh.position.distanceTo(npc.mesh.position);
                 if (dist < 8.0) { 
@@ -1342,6 +1363,15 @@
                         }
 
                     } else {
+                        if (activeItemEffects.shield.active) {
+                             createExplosion(midPoint, 0x00ffff, 20);
+                             scatterTails(npc, 0.3); 
+                             const pushForce = collisionNormal.clone().multiplyScalar(30.0);
+                             npc.velocity.add(pushForce);
+                             showNotification("SHIELD BASH! TAILS DROPPED!");
+                             return;
+                        }
+
                         const force = 10.0; 
                         const playerBounce = collisionNormal.clone().multiplyScalar(force);
                         player.velocity.add(playerBounce);
@@ -1528,6 +1558,7 @@
             setDoc(myDocRef, {
                 x: player.mesh.position.x,
                 y: player.mesh.position.z, 
+                username: player.username, // Send username for nametag
                 score: score,
                 tailCount: player.tailMeshes.length,
                 timestamp: serverTimestamp()
@@ -1560,6 +1591,7 @@
                         if (remotePlayers[uid]) {
                             scene.remove(remotePlayers[uid].mesh);
                             remotePlayers[uid].tailMeshes.forEach(m => scene.remove(m));
+                            if(remotePlayers[uid].nameTag) remotePlayers[uid].nameTag.remove();
                             delete remotePlayers[uid];
                         }
                     }
@@ -1654,11 +1686,30 @@
                     continue;
                 }
                 
+                // Check Collision with Remote Players (PvP)
+                Object.values(remotePlayers).forEach(rp => {
+                    if (p.mesh.position.distanceTo(rp.mesh.position) < 5.0) {
+                         createExplosion(rp.mesh.position, 0x00ff00, 10);
+                         // Visual feedback only for remote player hit
+                         scatterTails(rp, 0.1); 
+                         scene.remove(p.mesh);
+                         projectiles.splice(i, 1);
+                         // Break inner loop, outer loop continues
+                         // Since we splice, we should break to avoid index error or use reverse loop
+                         // Simple break is safe here as bullet hits only one target
+                         return; 
+                    }
+                });
+                // Legacy NPC check (if enabled)
                 for (let j = 0; j < npcs.length; j++) {
                     if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
                         createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
                         const pushDir = p.dir.clone().normalize().multiplyScalar(5.0);
                         npcs[j].velocity.add(pushDir);
+                        
+                        // Tail Drop (10% from bullet)
+                        scatterTails(npcs[j], 0.1);
+                        
                         scene.remove(p.mesh);
                         projectiles.splice(i, 1);
                         break;
@@ -1880,6 +1931,7 @@
                 rp.path.unshift(rp.mesh.position.clone());
                 if (rp.path.length > 500) rp.path.pop();
                 updateTail(rp);
+                updateNameTag(rp);
             }
 
             processCubes(player);
