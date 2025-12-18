@@ -1202,6 +1202,64 @@
             });
         }
 
+        function processCubes(entity) {
+            if (entity === player && debuffState.active) return;
+
+            entity.mesh.updateMatrixWorld();
+            const now = Date.now() * 0.002;
+
+            for (let i = cubes.length - 1; i >= 0; i--) {
+                const c = cubes[i];
+                c.mesh.rotation.y += c.rotateSpeed;
+
+                if (c.mesh.userData.velocity) {
+                    c.mesh.position.add(c.mesh.userData.velocity);
+                    c.mesh.userData.velocity.y -= 0.03; 
+                    if (c.mesh.position.y < CONFIG.fixedY) {
+                        c.mesh.position.y = CONFIG.fixedY;
+                        c.mesh.userData.velocity.multiplyScalar(0.5); 
+                        c.mesh.userData.velocity.y = 0;
+                    }
+                } else {
+                     const dist = entity.mesh.position.distanceTo(c.mesh.position);
+                     if (dist < 25) {
+                        c.mesh.position.lerp(entity.mesh.position, 0.25);
+                        c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
+                    } else {
+                        c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
+                    }
+                }
+                
+                const dist = entity.mesh.position.distanceTo(c.mesh.position);
+                if (dist < 5.0) { 
+                    createExplosion(c.mesh.position, c.mesh.userData.color);
+                    scene.remove(c.mesh);
+                    cubes.splice(i, 1);
+                    
+                    // Add Score logic for Player & NPCs
+                    if (entity === player) {
+                        const type = c.mesh.userData.type;
+                        score += c.mesh.userData.points;
+                        eatenCounts[type]++;
+                        if (eatenCounts[type] >= CONFIG.cubes[type].required) {
+                            addTailSegment(player, c.mesh.userData.color);
+                            eatenCounts[type] = 0; 
+                        }
+                        updateHUD();
+                    } else if (entity.score !== undefined) { // Is NPC
+                        const type = c.mesh.userData.type;
+                        entity.score += c.mesh.userData.points;
+                        if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
+                    } else {
+                        // Remote player visual only
+                        if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
+                    }
+
+                    if (!popcornMode) spawnCube(); 
+                }
+            }
+        }
+
         function checkEntityCollisions() {
             npcs.forEach(npc => {
                 const dist = player.mesh.position.distanceTo(npc.mesh.position);
@@ -1469,34 +1527,6 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
 
-        function endGame() {
-            isGameOver = true;
-            cancelAnimationFrame(animationFrameId);
-            
-            const allScores = [
-                { name: player.username + " (YOU)", score: score },
-                ...npcs.map(n => ({ name: n.name, score: n.score }))
-            ];
-            
-            allScores.sort((a, b) => b.score - a.score);
-            
-            const sb = document.getElementById('scoreboard');
-            sb.innerHTML = '';
-            
-            allScores.forEach((s, idx) => {
-                const row = document.createElement('div');
-                row.className = 'score-row';
-                row.innerHTML = `<span class="score-rank">#${idx+1}</span><span class="score-name">${s.name}</span><span class="score-val">${s.score}</span>`;
-                sb.appendChild(row);
-            });
-            
-            document.getElementById('result-overlay').style.display = 'flex';
-        }
-
-        // =================================================================
-        //                 MAIN LOOP & INIT
-        // =================================================================
-
         function animate() {
             if (isGameOver) return;
 
@@ -1521,6 +1551,7 @@
             checkFeverTime(now);
             updateItemEffects(now);
 
+            // Check Teleport Expiry
             if (inventoryItem === 'teleport' && teleportState.expire > 0 && now > teleportState.expire) {
                 inventoryItem = null;
                 teleportState = { charges: 0, expire: 0 };
@@ -1529,6 +1560,7 @@
                 itemRespawnTimers['teleport'] = now + CONFIG.itemRespawnDelay;
             }
 
+            // Check Item Respawn Timers
             for (const [type, respawnTime] of Object.entries(itemRespawnTimers)) {
                 if (respawnTime > 0 && now > respawnTime) {
                     spawnItem(type);
@@ -1536,12 +1568,14 @@
                 }
             }
 
+            // Animate Items on Field
             for (let i = activeItemsOnField.length - 1; i >= 0; i--) {
                 const item = activeItemsOnField[i];
                 item.mesh.rotation.y += 0.02;
                 item.mesh.rotation.z += 0.01;
                 item.mesh.position.y = 5 + Math.sin(now * 0.005) * 1.0;
                 
+                // Collision with player
                 if (player.mesh.position.distanceTo(item.mesh.position) < 8.0) {
                     if (inventoryItem) {
                         // Inventory full
@@ -1556,6 +1590,7 @@
                 }
             }
 
+            // Update Projectiles
             for (let i = projectiles.length - 1; i >= 0; i--) {
                 const p = projectiles[i];
                 p.mesh.position.add(p.dir.clone().multiplyScalar(p.speed));
@@ -1566,6 +1601,7 @@
                     continue;
                 }
                 
+                // NPC Collision with Projectile
                 for (let j = 0; j < npcs.length; j++) {
                     if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
                         createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
@@ -1578,11 +1614,13 @@
                 }
             }
 
+            // Cycle Wall Color
             if (wallMaterial) {
                 const hue = (now * 0.00002) % 1;
                 wallMaterial.color.setHSL(hue, 0.7, 0.25);
             }
 
+            // Popcorn Logic (Visuals only now if triggered by collision)
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 if (popcornTimer <= 0) {
@@ -1590,6 +1628,7 @@
                 }
             }
 
+            // Combo Timer
             if (comboCount > 0) {
                 comboTimer -= deltaTime * 1000;
                 if (comboTimer <= 0) {
@@ -1610,6 +1649,7 @@
                 comboEl.classList.remove('active');
             }
 
+            // Dash Logic
             if (dashState.active) {
                 if (now > dashState.endTime) {
                     dashState.active = false;
@@ -1630,6 +1670,7 @@
             }
 
             if (player) {
+                // Stamina Logic (Updated for Infinite Boost)
                 const isInfiniteBoost = (now - gameStartTime) < CONFIG.infiniteBoostDuration;
                 
                 if (isBoost && stats.stamina > 0) {
@@ -1641,13 +1682,14 @@
                     stats.stamina = Math.min(CONFIG.staminaMax, stats.stamina + CONFIG.staminaRegen * deltaTime);
                 }
 
+                // Stamina UI Color Update
                 const stmBar = document.getElementById('stamina-fill');
                 const stmLabel = document.getElementById('stm-label');
                 const stmPct = (stats.stamina / CONFIG.staminaMax) * 100;
                 stmBar.style.width = `${stmPct}%`;
                 
                 if (isInfiniteBoost) {
-                    stmBar.style.background = '#d000ff'; 
+                    stmBar.style.background = '#d000ff'; // Purple for infinite
                     stmBar.style.boxShadow = '0 0 8px #d000ff';
                     stmLabel.innerText = "NO LIMIT";
                     stmLabel.style.color = '#d000ff';
@@ -1658,6 +1700,7 @@
                     stmLabel.style.color = '#00ff88';
                 }
 
+                // Boost Tail Drop
                 if (isBoost) {
                     stats.boostCostTimer += deltaTime;
                     if (stats.boostCostTimer >= 1.0) {
@@ -1742,6 +1785,7 @@
                     player.velocity.multiplyScalar(CONFIG.friction);
                     let currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
                     
+                    // Apply Item Speed Buff
                     if (activeItemEffects.speed.active) currentMaxSpeed *= 2.0;
 
                     if (player.velocity.length() > currentMaxSpeed) {
