@@ -233,6 +233,23 @@
         #bgm-label { min-width: 50px; text-align: center; color: #00e5ff; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         #bgm-mode-icon { font-size: 16px; margin-left: 5px; cursor: pointer; }
 
+        /* Name Tag Style */
+        .name-tag {
+            position: absolute;
+            top: 0; left: 0;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            pointer-events: none;
+            text-shadow: 0 0 2px #000;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            white-space: nowrap;
+            will-change: transform;
+            transform: translate(-50%, -150%); /* Center above head */
+        }
+
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
             text-align: center; color: rgba(255, 255, 255, 0.5);
@@ -637,6 +654,14 @@
         //                 HELPER & GAME LOGIC FUNCTIONS
         // =================================================================
 
+        function createNameTag(name) {
+            const div = document.createElement('div');
+            div.className = 'name-tag';
+            div.innerText = name;
+            document.getElementById('ui-layer').appendChild(div);
+            return div;
+        }
+
         function createEnvironment() {
             const size = CONFIG.worldSize;
             const wallThick = 2.0;
@@ -724,11 +749,15 @@
             return line;
         }
 
-        function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff) {
+        function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff, hasGrid = true) {
             const group = new THREE.Group();
-            const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
-            const outerMesh = createWireframeMesh(outerGeo, color);
-            group.add(outerMesh);
+
+            if (hasGrid) {
+                const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
+                const outerMesh = createWireframeMesh(outerGeo, color);
+                group.add(outerMesh);
+                group.userData.outer = outerMesh; // Save reference
+            }
 
             const midGeo = new THREE.IcosahedronGeometry(2.2, 1);
             const midMesh = createWireframeMesh(midGeo, coreColor);
@@ -758,14 +787,13 @@
             coreMesh.add(light);
             group.add(coreMesh);
 
-            group.userData = {
-                outer: outerMesh,
-                mid: midMesh,
-                core: coreMesh,
-                dist: distMesh, 
-                baseColor: new THREE.Color(color),
-                rotSpeed: 0.02
-            };
+            // Assign base props
+            group.userData.mid = midMesh;
+            group.userData.core = coreMesh;
+            group.userData.dist = distMesh;
+            group.userData.baseColor = new THREE.Color(color);
+            group.userData.rotSpeed = 0.02;
+
             return group;
         }
 
@@ -791,12 +819,13 @@
                 path: [], 
                 tailMeshes: [],
                 color: 0x00ffff,
-                username: "Player"
+                username: "Player",
+                nameTag: null // Will be assigned in startGame
             };
         }
 
         function createNPC() {
-            const mesh = createPlayerMesh(0xff8800, 0xffaa00); 
+            const mesh = createPlayerMesh(0xff8800, 0xffaa00, false); // No Grid for NPC
             mesh.position.y = CONFIG.fixedY;
             const range = CONFIG.worldSize / 2;
             mesh.position.x = (Math.random() - 0.5) * range;
@@ -804,7 +833,8 @@
             scene.add(mesh);
             
             const name = NPC_NAMES[Math.floor(Math.random() * NPC_NAMES.length)];
-            
+            const nameTag = createNameTag(name);
+
             npcs.push({
                 mesh: mesh,
                 velocity: new THREE.Vector3(),
@@ -814,7 +844,8 @@
                 speed: CONFIG.speed * 0.8,
                 changeTargetTime: 0,
                 name: name,
-                score: 0
+                score: 0,
+                nameTag: nameTag
             });
         }
 
@@ -949,7 +980,7 @@
             skillState.cooldownUntil = now + CONFIG.skillCooldown; 
             
             showNotification("DIGESTION MODE ON");
-            player.mesh.userData.outer.material.color.setHex(0xff0055);
+            if(player.mesh.userData.outer) player.mesh.userData.outer.material.color.setHex(0xff0055);
         }
 
         function activateDash() {
@@ -1169,6 +1200,21 @@
             }
         }
 
+        function updateNameTag(entity) {
+            if(!entity.nameTag || !entity.mesh) return;
+            const tempV = new THREE.Vector3();
+            tempV.copy(entity.mesh.position);
+            tempV.y += 10; 
+
+            tempV.project(camera);
+
+            const x = (tempV.x * .5 + .5) * window.innerWidth;
+            const y = (tempV.y * -.5 + .5) * window.innerHeight;
+
+            entity.nameTag.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+            entity.nameTag.style.display = (tempV.z < 1) ? 'block' : 'none'; // Basic occlusion
+        }
+
         function updateNPCs() {
             npcs.forEach(npc => {
                 if (!npc.target || Math.random() < 0.02) { 
@@ -1194,11 +1240,16 @@
                 npc.mesh.position.x = Math.max(-limit, Math.min(limit, npc.mesh.position.x));
                 npc.mesh.position.z = Math.max(-limit, Math.min(limit, npc.mesh.position.z));
                 
-                npc.mesh.userData.outer.rotation.y += 0.02;
+                // Safe rotation check for NPC (no outerMesh)
+                if(npc.mesh.userData.outer) {
+                     npc.mesh.userData.outer.rotation.y += 0.02;
+                }
+                
                 npc.path.unshift(npc.mesh.position.clone());
                 if (npc.path.length > 500) npc.path.pop();
                 updateTail(npc);
                 processCubes(npc);
+                updateNameTag(npc);
             });
         }
 
@@ -1601,7 +1652,6 @@
                     continue;
                 }
                 
-                // NPC Collision with Projectile
                 for (let j = 0; j < npcs.length; j++) {
                     if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
                         createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
@@ -1614,13 +1664,11 @@
                 }
             }
 
-            // Cycle Wall Color
             if (wallMaterial) {
                 const hue = (now * 0.00002) % 1;
                 wallMaterial.color.setHSL(hue, 0.7, 0.25);
             }
 
-            // Popcorn Logic (Visuals only now if triggered by collision)
             if (popcornMode) {
                 popcornTimer -= deltaTime;
                 if (popcornTimer <= 0) {
@@ -1628,7 +1676,6 @@
                 }
             }
 
-            // Combo Timer
             if (comboCount > 0) {
                 comboTimer -= deltaTime * 1000;
                 if (comboTimer <= 0) {
@@ -1649,7 +1696,6 @@
                 comboEl.classList.remove('active');
             }
 
-            // Dash Logic
             if (dashState.active) {
                 if (now > dashState.endTime) {
                     dashState.active = false;
@@ -1670,7 +1716,6 @@
             }
 
             if (player) {
-                // Stamina Logic (Updated for Infinite Boost)
                 const isInfiniteBoost = (now - gameStartTime) < CONFIG.infiniteBoostDuration;
                 
                 if (isBoost && stats.stamina > 0) {
@@ -1682,14 +1727,13 @@
                     stats.stamina = Math.min(CONFIG.staminaMax, stats.stamina + CONFIG.staminaRegen * deltaTime);
                 }
 
-                // Stamina UI Color Update
                 const stmBar = document.getElementById('stamina-fill');
                 const stmLabel = document.getElementById('stm-label');
                 const stmPct = (stats.stamina / CONFIG.staminaMax) * 100;
                 stmBar.style.width = `${stmPct}%`;
                 
                 if (isInfiniteBoost) {
-                    stmBar.style.background = '#d000ff'; // Purple for infinite
+                    stmBar.style.background = '#d000ff'; 
                     stmBar.style.boxShadow = '0 0 8px #d000ff';
                     stmLabel.innerText = "NO LIMIT";
                     stmLabel.style.color = '#d000ff';
@@ -1700,7 +1744,6 @@
                     stmLabel.style.color = '#00ff88';
                 }
 
-                // Boost Tail Drop
                 if (isBoost) {
                     stats.boostCostTimer += deltaTime;
                     if (stats.boostCostTimer >= 1.0) {
@@ -1785,7 +1828,6 @@
                     player.velocity.multiplyScalar(CONFIG.friction);
                     let currentMaxSpeed = isBoost ? CONFIG.boostSpeed : CONFIG.speed;
                     
-                    // Apply Item Speed Buff
                     if (activeItemEffects.speed.active) currentMaxSpeed *= 2.0;
 
                     if (player.velocity.length() > currentMaxSpeed) {
@@ -1818,6 +1860,7 @@
                 updateTail(player);
                 updateNPCs();
                 checkEntityCollisions();
+                updateNameTag(player); // Player name tag update
                 
                 // --- NETWORK THROTTLING ---
                 if (now - lastNetworkUpdate > NETWORK_TICK_RATE && isOnline) {
@@ -1950,7 +1993,12 @@
         window.startGame = function() {
             const username = document.getElementById('username').value || "Player";
             document.getElementById('login-overlay').style.display = 'none';
-            if(player) player.username = username;
+            
+            // Set name tag only after username is decided
+            if(player) {
+                player.username = username;
+                player.nameTag = createNameTag(username);
+            }
             
             gameStartTime = Date.now();
 
