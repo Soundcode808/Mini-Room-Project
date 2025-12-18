@@ -238,16 +238,18 @@
             position: absolute;
             top: 0; left: 0;
             color: #ffffff;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
             pointer-events: none;
-            text-shadow: 0 0 2px #000;
-            border: 1px solid rgba(0, 255, 255, 0.3);
+            text-shadow: 0 0 5px #000;
+            border: 2px solid #00ffff;
             white-space: nowrap;
             will-change: transform;
             transform: translate(-50%, -150%); /* Center above head */
+            z-index: 100;
         }
 
         .controls-hint {
@@ -329,7 +331,7 @@
 <body>
 
     <div id="login-overlay">
-        <div class="title">MINIROOM<br>TESSERACT 3D</div>
+        <div class="title">MiNi RooM<br>Visual Planning</div>
         <div class="subtitle">NEON ICE VERSE</div>
         <input type="text" id="username" class="login-input" placeholder="CODENAME" maxlength="10">
         <button class="start-btn" onclick="startGame()">CONNECT</button>
@@ -564,7 +566,7 @@
             acceleration: 0.02, 
             friction: 0.990, 
             turnFriction: 0.96, 
-            npcCount: 5,
+            npcCount: 0,
             tailOverlap: 0.5, 
             tailSize: 3.5,
             cubes: {
@@ -1204,14 +1206,14 @@
             if(!entity.nameTag || !entity.mesh) return;
             const tempV = new THREE.Vector3();
             tempV.copy(entity.mesh.position);
-            tempV.y += 10; 
+            tempV.y += 15; // Raised height for better visibility
 
             tempV.project(camera);
 
             const x = (tempV.x * .5 + .5) * window.innerWidth;
             const y = (tempV.y * -.5 + .5) * window.innerHeight;
 
-            entity.nameTag.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+            entity.nameTag.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px)`;
             entity.nameTag.style.display = (tempV.z < 1) ? 'block' : 'none'; // Basic occlusion
         }
 
