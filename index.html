@@ -14,23 +14,14 @@
             user-select: none;
         }
 
-        /* UI Layers */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
             padding: 20px; box-sizing: border-box;
             display: flex; flex-direction: column; justify-content: space-between;
-            z-index: 10;
         }
 
-        #nametag-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 5; /* 3D Canvas(0) < Nametag(5) < UI(10) */
-            overflow: hidden;
-        }
-
-        /* Top Center */
+        /* Top Center (Fever & Combo & Timer) */
         .hud-top-center {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             text-align: center;
@@ -49,6 +40,7 @@
         .fever-timer { font-size: 20px; font-weight: 900; }
         .jackpot-val { color: #fff; font-size: 12px; margin-top: 2px; }
 
+        /* Game Timer Style */
         .game-timer-box {
             margin-top: 5px;
             color: #ffffff;
@@ -241,27 +233,6 @@
         #bgm-label { min-width: 50px; text-align: center; color: #00e5ff; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         #bgm-mode-icon { font-size: 16px; margin-left: 5px; cursor: pointer; }
 
-        /* Name Tag Style (Improved) */
-        .name-tag {
-            position: absolute;
-            top: 0; left: 0;
-            color: #ffffff;
-            background: rgba(0, 0, 0, 0.85); /* Darker background */
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 16px; /* Increased Size */
-            font-weight: 900; /* Bold */
-            pointer-events: none;
-            text-shadow: 0 0 5px #00e5ff; /* Glow effect */
-            border: 2px solid #00ffff; /* Neon border */
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-            white-space: nowrap;
-            will-change: transform;
-            /* Initially hidden, shown by update loop */
-            display: none; 
-            z-index: 1000;
-        }
-
         .controls-hint {
             position: absolute; bottom: 20px; width: 100%;
             text-align: center; color: rgba(255, 255, 255, 0.5);
@@ -276,68 +247,29 @@
         #result-overlay { display: none; } /* Hidden by default */
         
         .title {
-            font-size: 50px; color: #fff; text-transform: uppercase;
+            font-size: 60px; color: #fff; text-transform: uppercase;
             text-shadow: 0 0 50px #00e5ff, 0 0 20px #00e5ff;
             margin-bottom: 10px; letter-spacing: 5px; text-align: center;
-            line-height: 1.2;
         }
         .subtitle {
-            color: #00e5ff; font-size: 16px; letter-spacing: 8px; margin-bottom: 30px; opacity: 0.8;
+            color: #00e5ff; font-size: 16px; letter-spacing: 8px; margin-bottom: 50px; opacity: 0.8;
         }
-        
-        /* New Login UI Style */
-        .login-box {
-            display: flex; flex-direction: column; gap: 15px; align-items: center; width: 320px;
-        }
-        .input-group {
-            display: flex; flex-direction: column; width: 100%; gap: 5px;
-        }
-        .input-label { color: #00e5ff; font-size: 12px; margin-left: 10px; }
         .login-input {
             background: rgba(0,0,0,0.5); border: 2px solid #00e5ff;
-            color: #fff; padding: 12px 20px; font-family: 'Orbitron';
-            font-size: 16px; text-align: center; border-radius: 30px;
-            outline: none; width: 100%; box-sizing: border-box;
-            box-shadow: 0 0 10px rgba(0,229,255,0.1);
+            color: #fff; padding: 15px 25px; font-family: 'Orbitron';
+            font-size: 20px; text-align: center; border-radius: 30px;
+            outline: none; margin-bottom: 20px; width: 250px;
+            box-shadow: 0 0 20px rgba(0,229,255,0.2);
             transition: all 0.3s;
         }
-        .login-input:focus { box-shadow: 0 0 30px rgba(0,229,255,0.4); }
-        
-        .btn-group {
-            display: flex; gap: 10px; width: 100%; margin-top: 10px;
-        }
+        .login-input:focus { box-shadow: 0 0 40px rgba(0,229,255,0.5); width: 280px; }
         .start-btn {
             background: #00e5ff; color: #000; border: none;
-            padding: 12px 0; font-family: 'Orbitron'; font-weight: 900;
-            font-size: 16px; border-radius: 30px; cursor: pointer;
-            box-shadow: 0 0 20px #00e5ff; transition: all 0.2s;
-            flex: 1;
+            padding: 15px 40px; font-family: 'Orbitron'; font-weight: 900;
+            font-size: 18px; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 0 30px #00e5ff; transition: all 0.2s;
         }
-        .start-btn:hover { transform: scale(1.05); box-shadow: 0 0 40px #00e5ff; background: #fff; }
-        
-        .create-btn {
-            background: transparent; border: 2px solid #00e5ff; color: #00e5ff;
-            box-shadow: 0 0 10px #00e5ff;
-        }
-        .create-btn:hover { background: rgba(0, 229, 255, 0.2); transform: scale(1.05); color: #fff;}
-
-        /* Room List Style */
-        .room-list-container {
-            margin-bottom: 20px; width: 320px;
-            background: rgba(0, 10, 20, 0.8);
-            border: 1px solid #333;
-            border-radius: 10px;
-            max-height: 150px; overflow-y: auto;
-            padding: 10px;
-        }
-        .room-list-title { color: #888; font-size: 10px; margin-bottom: 5px; text-align: center; }
-        .room-item {
-            padding: 8px; border-bottom: 1px solid #333;
-            color: #ccc; font-size: 14px; cursor: pointer;
-            transition: 0.2s; display: flex; justify-content: space-between;
-        }
-        .room-item:hover { background: rgba(0, 229, 255, 0.2); color: #fff; }
-        .room-item-name { color: #00e5ff; }
+        .start-btn:hover { transform: scale(1.1); box-shadow: 0 0 60px #00e5ff; background: #fff; }
 
         /* Scoreboard Style */
         .scoreboard {
@@ -380,31 +312,10 @@
 <body>
 
     <div id="login-overlay">
-        <div class="title">MiNi RooM<br>Visual Planning</div>
+        <div class="title">MINIROOM<br>TESSERACT 3D</div>
         <div class="subtitle">NEON ICE VERSE</div>
-        
-        <div class="room-list-container" id="room-list-box">
-            <div class="room-list-title">AVAILABLE ROOMS</div>
-            <div id="room-list-content">
-                <div style="text-align:center; color:#555; padding:20px;">Searching...</div>
-            </div>
-        </div>
-
-        <div class="login-box">
-            <div class="input-group">
-                <span class="input-label">ROOM NAME</span>
-                <input type="text" id="roomname" class="login-input" placeholder="LOBBY" value="LOBBY" maxlength="15">
-            </div>
-            <div class="input-group">
-                <span class="input-label">NICKNAME</span>
-                <input type="text" id="username" class="login-input" placeholder="PLAYER" maxlength="10">
-            </div>
-            
-            <div class="btn-group">
-                <button class="start-btn" onclick="startGame('join')">JOIN ROOM</button>
-                <button class="start-btn create-btn" onclick="startGame('create')">CREATE</button>
-            </div>
-        </div>
+        <input type="text" id="username" class="login-input" placeholder="CODENAME" maxlength="10">
+        <button class="start-btn" onclick="startGame()">CONNECT</button>
     </div>
 
     <!-- Game Over Result Overlay -->
@@ -418,9 +329,6 @@
     </div>
 
     <div id="ui-layer">
-        <!-- Separate Layer for Name Tags -->
-        <div id="nametag-layer"></div>
-
         <div class="hud-top-center">
             <div class="fever-box">
                 <div class="fever-title">NEXT FEVER CHANCE</div>
@@ -604,11 +512,6 @@
         let lastTime = Date.now();
         let animationFrameId;
         let isGameOver = false;
-        let lastNetworkUpdate = 0;
-        const NETWORK_TICK_RATE = 100; // 100ms = 10 updates/sec
-        
-        // Multi-Room State
-        let currentRoomId = "LOBBY";
 
         async function initFirebase() {
             if (!firebaseConfig) return;
@@ -626,35 +529,10 @@
                 if (user) {
                     currentUser = user;
                     isOnline = true;
-                    // Note: Doc creation happens in startGame now
-                    
-                    // Listen to room list
-                    setupRoomListListener();
+                    myDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', user.uid);
+                    setupNetworkListeners();
                 }
             });
-        }
-        
-        function setupRoomListListener() {
-             const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
-             onSnapshot(roomsRef, (snapshot) => {
-                 const container = document.getElementById('room-list-content');
-                 container.innerHTML = '';
-                 if(snapshot.empty) {
-                     container.innerHTML = '<div style="text-align:center; padding:10px; color:#555;">No rooms found. Create one!</div>';
-                     return;
-                 }
-                 
-                 snapshot.forEach(doc => {
-                     const room = doc.data();
-                     const div = document.createElement('div');
-                     div.className = 'room-item';
-                     div.innerHTML = `<span class="room-item-name">${room.roomName}</span> <span>Join &gt;</span>`;
-                     div.onclick = () => {
-                         document.getElementById('roomname').value = room.roomName;
-                     };
-                     container.appendChild(div);
-                 });
-             });
         }
 
         const CONFIG = {
@@ -666,7 +544,7 @@
             acceleration: 0.02, 
             friction: 0.990, 
             turnFriction: 0.96, 
-            npcCount: 0, 
+            npcCount: 5,
             tailOverlap: 0.5, 
             tailSize: 3.5,
             cubes: {
@@ -752,18 +630,7 @@
         let popcornMode = false;
         let popcornTimer = 0;
 
-        // =================================================================
-        //                 HELPER & GAME LOGIC FUNCTIONS
-        // =================================================================
-
-        function createNameTag(name) {
-            const div = document.createElement('div');
-            div.className = 'name-tag';
-            div.innerText = name;
-            // Append to the specialized nametag layer
-            document.getElementById('nametag-layer').appendChild(div);
-            return div;
-        }
+        // --- HELPER FUNCTIONS ---
 
         function createEnvironment() {
             const size = CONFIG.worldSize;
@@ -852,15 +719,11 @@
             return line;
         }
 
-        function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff, hasGrid = true) {
+        function createPlayerMesh(color = 0x0088ff, coreColor = 0x00ffff) {
             const group = new THREE.Group();
-
-            if (hasGrid) {
-                const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
-                const outerMesh = createWireframeMesh(outerGeo, color);
-                group.add(outerMesh);
-                group.userData.outer = outerMesh; // Save reference
-            }
+            const outerGeo = new THREE.IcosahedronGeometry(3.0, 3);
+            const outerMesh = createWireframeMesh(outerGeo, color);
+            group.add(outerMesh);
 
             const midGeo = new THREE.IcosahedronGeometry(2.2, 1);
             const midMesh = createWireframeMesh(midGeo, coreColor);
@@ -890,13 +753,14 @@
             coreMesh.add(light);
             group.add(coreMesh);
 
-            // Assign base props
-            group.userData.mid = midMesh;
-            group.userData.core = coreMesh;
-            group.userData.dist = distMesh;
-            group.userData.baseColor = new THREE.Color(color);
-            group.userData.rotSpeed = 0.02;
-
+            group.userData = {
+                outer: outerMesh,
+                mid: midMesh,
+                core: coreMesh,
+                dist: distMesh, 
+                baseColor: new THREE.Color(color),
+                rotSpeed: 0.02
+            };
             return group;
         }
 
@@ -922,29 +786,41 @@
                 path: [], 
                 tailMeshes: [],
                 color: 0x00ffff,
-                username: "Player",
-                nameTag: null // Will be assigned in startGame
+                username: "Player"
             };
         }
 
         function createNPC() {
-            // Disabled NPCs as per user request
+            const mesh = createPlayerMesh(0xff8800, 0xffaa00); 
+            mesh.position.y = CONFIG.fixedY;
+            const range = CONFIG.worldSize / 2;
+            mesh.position.x = (Math.random() - 0.5) * range;
+            mesh.position.z = (Math.random() - 0.5) * range;
+            scene.add(mesh);
+            
+            const name = NPC_NAMES[Math.floor(Math.random() * NPC_NAMES.length)];
+            
+            npcs.push({
+                mesh: mesh,
+                velocity: new THREE.Vector3(),
+                path: [],
+                tailMeshes: [],
+                target: null,
+                speed: CONFIG.speed * 0.8,
+                changeTargetTime: 0,
+                name: name,
+                score: 0
+            });
         }
 
         function createRemotePlayer(id, data) {
             const mesh = createPlayerMesh(); 
             mesh.position.y = CONFIG.fixedY;
             scene.add(mesh);
-            // We assume name passed in data, otherwise default
-            const name = data.username || "Unknown";
-            const nameTag = createNameTag(name);
-            
             return {
                 mesh: mesh,
                 tailMeshes: [],
-                targetPos: new THREE.Vector3(data.x || 0, CONFIG.fixedY, data.y || 0),
-                nameTag: nameTag,
-                name: name
+                targetPos: new THREE.Vector3(data.x || 0, CONFIG.fixedY, data.y || 0)
             };
         }
 
@@ -1008,11 +884,12 @@
             showNotification(`ITEM SPAWNED: ${type.toUpperCase()}`);
         }
 
+        // Updated Energy Shot: 3-Way Spread
         function spawnEnergyShot() {
             const baseDir = player.velocity.clone().normalize();
             if (baseDir.lengthSq() < 0.01) baseDir.set(0, 0, -1);
 
-            const angles = [-0.2, 0, 0.2]; 
+            const angles = [-0.2, 0, 0.2]; // Radians ~ 11.5 degrees spread
             
             angles.forEach(angle => {
                 const shotGeo = new THREE.SphereGeometry(1.5, 8, 8);
@@ -1022,6 +899,7 @@
                 shot.position.copy(player.mesh.position);
                 shot.position.y = CONFIG.fixedY;
                 
+                // Rotate base direction by angle around Y axis
                 const dir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
 
                 scene.add(shot);
@@ -1068,7 +946,7 @@
             skillState.cooldownUntil = now + CONFIG.skillCooldown; 
             
             showNotification("DIGESTION MODE ON");
-            if(player.mesh.userData.outer) player.mesh.userData.outer.material.color.setHex(0xff0055);
+            player.mesh.userData.outer.material.color.setHex(0xff0055);
         }
 
         function activateDash() {
@@ -1161,9 +1039,8 @@
         }
 
         function scatterTails(entity, ratio = 0.5) {
-            // Note: Since remotePlayers tails are just visual copies, this effect is purely visual for them
-            // unless we have server authority. For local player, it removes real tails.
-            
+            if (entity === player && activeItemEffects.shield.active) return;
+
             const totalTails = entity.tailMeshes.length;
             if(totalTails === 0) return;
 
@@ -1188,7 +1065,7 @@
                     }
                 }
             }
-            
+
             if(entity === player) updateHUD();
         }
 
@@ -1289,21 +1166,6 @@
             }
         }
 
-        function updateNameTag(entity) {
-            if(!entity.nameTag || !entity.mesh) return;
-            const tempV = new THREE.Vector3();
-            tempV.copy(entity.mesh.position);
-            tempV.y += 15; // Raised height for better visibility
-
-            tempV.project(camera);
-
-            const x = (tempV.x * .5 + .5) * window.innerWidth;
-            const y = (tempV.y * -.5 + .5) * window.innerHeight;
-
-            entity.nameTag.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px)`;
-            entity.nameTag.style.display = (tempV.z < 1) ? 'block' : 'none'; // Basic occlusion
-        }
-
         function updateNPCs() {
             npcs.forEach(npc => {
                 if (!npc.target || Math.random() < 0.02) { 
@@ -1329,16 +1191,11 @@
                 npc.mesh.position.x = Math.max(-limit, Math.min(limit, npc.mesh.position.x));
                 npc.mesh.position.z = Math.max(-limit, Math.min(limit, npc.mesh.position.z));
                 
-                // Safe rotation check for NPC (no outerMesh)
-                if(npc.mesh.userData.outer) {
-                     npc.mesh.userData.outer.rotation.y += 0.02;
-                }
-                
+                npc.mesh.userData.outer.rotation.y += 0.02;
                 npc.path.unshift(npc.mesh.position.clone());
                 if (npc.path.length > 500) npc.path.pop();
                 updateTail(npc);
                 processCubes(npc);
-                updateNameTag(npc);
             });
         }
 
@@ -1401,35 +1258,6 @@
         }
 
         function checkEntityCollisions() {
-            // Check Remote Players Collision (PvP)
-            Object.values(remotePlayers).forEach(rp => {
-                const dist = player.mesh.position.distanceTo(rp.mesh.position);
-                if (dist < 8.0) {
-                     const midPoint = new THREE.Vector3().addVectors(player.mesh.position, rp.mesh.position).multiplyScalar(0.5);
-                     createExplosion(midPoint, 0xffffff, 15);
-                     
-                     const collisionNormal = new THREE.Vector3().subVectors(player.mesh.position, rp.mesh.position);
-                     collisionNormal.y = 0;
-                     collisionNormal.normalize();
-                     
-                     // PvP Logic: Both bounce & lose tails
-                     const force = 10.0;
-                     player.velocity.add(collisionNormal.clone().multiplyScalar(force));
-                     
-                     // Shield Bonus
-                     if (activeItemEffects.shield.active) {
-                         scatterTails(rp, 0.3); // Shield drops 30%
-                         showNotification("PVP: SHIELD SMASH!");
-                     } else {
-                         // Default PVP impact
-                         applyCollisionDebuff(); // Self debuff
-                         scatterTails(player, 0.1); // Self drops 10%
-                         scatterTails(rp, 0.1); // Opponent visually drops 10%
-                     }
-                }
-            });
-            
-            // Check NPCs Collision (Legacy if any)
             npcs.forEach(npc => {
                 const dist = player.mesh.position.distanceTo(npc.mesh.position);
                 if (dist < 8.0) { 
@@ -1458,15 +1286,6 @@
                         }
 
                     } else {
-                        if (activeItemEffects.shield.active) {
-                             createExplosion(midPoint, 0x00ffff, 20);
-                             scatterTails(npc, 0.3); 
-                             const pushForce = collisionNormal.clone().multiplyScalar(30.0);
-                             npc.velocity.add(pushForce);
-                             showNotification("SHIELD BASH! TAILS DROPPED!");
-                             return;
-                        }
-
                         const force = 10.0; 
                         const playerBounce = collisionNormal.clone().multiplyScalar(force);
                         player.velocity.add(playerBounce);
@@ -1653,10 +1472,8 @@
             setDoc(myDocRef, {
                 x: player.mesh.position.x,
                 y: player.mesh.position.z, 
-                username: player.username, // Send username for nametag
                 score: score,
                 tailCount: player.tailMeshes.length,
-                roomId: currentRoomId, // Room ID for filtering
                 timestamp: serverTimestamp()
             }).catch(e => console.error(e));
         }
@@ -1671,22 +1488,8 @@
                     const uid = change.doc.id;
                     if (uid === currentUser.uid) return;
                     const data = change.doc.data();
-                    
-                    // --- Room Filtering Logic ---
-                    if (data.roomId !== currentRoomId) {
-                        // Remove player if they switched rooms or are in different room
-                        if (remotePlayers[uid]) {
-                             scene.remove(remotePlayers[uid].mesh);
-                             remotePlayers[uid].tailMeshes.forEach(m => scene.remove(m));
-                             if(remotePlayers[uid].nameTag) remotePlayers[uid].nameTag.remove();
-                             delete remotePlayers[uid];
-                        }
-                        return; 
-                    }
-
                     if (change.type === 'added') {
                         remotePlayers[uid] = createRemotePlayer(uid, data);
-                        showNotification(`${data.username || "PLAYER"} JOINED!`, 3000); 
                     }
                     if (change.type === 'modified') {
                         if (remotePlayers[uid]) {
@@ -1695,23 +1498,16 @@
                             if (diff > 0) {
                                 for(let k=0; k<diff; k++) addTailSegment(remotePlayers[uid], 0xff0055);
                             }
-                        } else {
-                            // Late joiner handling
-                            remotePlayers[uid] = createRemotePlayer(uid, data);
                         }
                     }
                     if (change.type === 'removed') {
                         if (remotePlayers[uid]) {
                             scene.remove(remotePlayers[uid].mesh);
                             remotePlayers[uid].tailMeshes.forEach(m => scene.remove(m));
-                            if(remotePlayers[uid].nameTag) remotePlayers[uid].nameTag.remove();
                             delete remotePlayers[uid];
-                            showNotification("PLAYER LEFT", 3000);
                         }
                     }
                 });
-            }, (error) => {
-                console.error("Firestore error:", error);
             });
             window.addEventListener('beforeunload', () => { deleteDoc(myDocRef); });
         }
@@ -1726,6 +1522,31 @@
         function onMouseMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function endGame() {
+            isGameOver = true;
+            cancelAnimationFrame(animationFrameId);
+            
+            // Build Scoreboard
+            const allScores = [
+                { name: player.username + " (YOU)", score: score },
+                ...npcs.map(n => ({ name: n.name, score: n.score }))
+            ];
+            
+            allScores.sort((a, b) => b.score - a.score);
+            
+            const sb = document.getElementById('scoreboard');
+            sb.innerHTML = '';
+            
+            allScores.forEach((s, idx) => {
+                const row = document.createElement('div');
+                row.className = 'score-row';
+                row.innerHTML = `<span class="score-rank">#${idx+1}</span><span class="score-name">${s.name}</span><span class="score-val">${s.score}</span>`;
+                sb.appendChild(row);
+            });
+            
+            document.getElementById('result-overlay').style.display = 'flex';
         }
 
         function animate() {
@@ -1802,30 +1623,11 @@
                     continue;
                 }
                 
-                // Check Collision with Remote Players (PvP)
-                Object.values(remotePlayers).forEach(rp => {
-                    if (p.mesh.position.distanceTo(rp.mesh.position) < 5.0) {
-                         createExplosion(rp.mesh.position, 0x00ff00, 10);
-                         // Visual feedback only for remote player hit
-                         scatterTails(rp, 0.1); 
-                         scene.remove(p.mesh);
-                         projectiles.splice(i, 1);
-                         // Break inner loop, outer loop continues
-                         // Since we splice, we should break to avoid index error or use reverse loop
-                         // Simple break is safe here as bullet hits only one target
-                         return; 
-                    }
-                });
-                // Legacy NPC check (if enabled)
                 for (let j = 0; j < npcs.length; j++) {
                     if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
                         createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
                         const pushDir = p.dir.clone().normalize().multiplyScalar(5.0);
                         npcs[j].velocity.add(pushDir);
-                        
-                        // Tail Drop (10% from bullet)
-                        scatterTails(npcs[j], 0.1);
-                        
                         scene.remove(p.mesh);
                         projectiles.splice(i, 1);
                         break;
@@ -2029,13 +1831,8 @@
                 updateTail(player);
                 updateNPCs();
                 checkEntityCollisions();
-                updateNameTag(player); // Player name tag update
                 
-                // --- NETWORK THROTTLING ---
-                if (now - lastNetworkUpdate > NETWORK_TICK_RATE && isOnline) {
-                    uploadState();
-                    lastNetworkUpdate = now;
-                }
+                if (frameCount % 5 === 0 && isOnline) uploadState();
             }
 
             for (const uid in remotePlayers) {
@@ -2047,7 +1844,6 @@
                 rp.path.unshift(rp.mesh.position.clone());
                 if (rp.path.length > 500) rp.path.pop();
                 updateTail(rp);
-                updateNameTag(rp);
             }
 
             processCubes(player);
@@ -2160,73 +1956,33 @@
             }
         };
 
-        window.startGame = function(mode) {
-            const roomName = document.getElementById('roomname').value;
+        window.startGame = function() {
             const username = document.getElementById('username').value || "Player";
-
-            if(!roomName) {
-                alert("Please enter a Room Name.");
-                return;
-            }
-
-            // Set Global Room ID
-            currentRoomId = roomName;
-
-            // If create mode, register room to Firestore list
-            if (mode === 'create') {
-                const roomsRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomName);
-                setDoc(roomsRef, {
-                    roomName: roomName,
-                    createdAt: serverTimestamp(),
-                    host: username
-                }).catch(e => console.error("Room create error:", e));
-            }
-
             document.getElementById('login-overlay').style.display = 'none';
-            
-            // Set name tag only after username is decided
-            if(player) {
-                player.username = username;
-                player.nameTag = createNameTag(username);
-            }
+            if(player) player.username = username;
             
             gameStartTime = Date.now();
 
             init3D();
-            
-            // Wait for DB init before playing
-            if(isOnline) {
-                // If already online (rare case in this flow), just set room
-            } else {
-                // Firebase is async initialized in initFirebase() call inside DOMContentLoaded or similar
-                // But here we called initFirebase() on load? No, we call it here.
-                // Wait, logic check: initFirebase() was called inside startGame in previous versions.
-                // Let's call it now if not already.
-                if(!auth) initFirebase(); 
-            }
+            initFirebase();
             
             bgmAudio.src = BGM_LIST[currentBgmIndex].url;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
-            showNotification(`JOINED ROOM: ${roomName}`);
             showNotification(`WELCOME, ${username}`);
+            showNotification(`UNLIMITED BOOST ACTIVE (20s)`);
         };
         
         window.returnToMain = function() {
-             location.reload(); 
+             location.reload(); // Simple reload to reset everything
         };
 
-        function showNotification(msg, duration=3000) {
+        function showNotification(msg) {
             const el = document.getElementById('notification');
             el.innerText = msg;
             el.style.opacity = 1;
-            // Clear previous timeout if exists to prevent overlapping fades
-            if(el.timeoutId) clearTimeout(el.timeoutId);
-            el.timeoutId = setTimeout(() => el.style.opacity = 0, duration);
+            setTimeout(() => el.style.opacity = 0, 3000);
         }
-        
-        // Initial Fire
-        initFirebase();
 
     </script>
 </body>
