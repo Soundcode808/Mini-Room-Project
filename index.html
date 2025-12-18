@@ -512,6 +512,9 @@
         let lastTime = Date.now();
         let animationFrameId;
         let isGameOver = false;
+        // Network Optimization Variables
+        let lastNetworkUpdate = 0;
+        const NETWORK_TICK_RATE = 100; // 100ms = 10 updates/sec
 
         async function initFirebase() {
             if (!firebaseConfig) return;
@@ -630,7 +633,9 @@
         let popcornMode = false;
         let popcornTimer = 0;
 
-        // --- HELPER FUNCTIONS ---
+        // =================================================================
+        //                 HELPER & GAME LOGIC FUNCTIONS
+        // =================================================================
 
         function createEnvironment() {
             const size = CONFIG.worldSize;
@@ -884,12 +889,11 @@
             showNotification(`ITEM SPAWNED: ${type.toUpperCase()}`);
         }
 
-        // Updated Energy Shot: 3-Way Spread
         function spawnEnergyShot() {
             const baseDir = player.velocity.clone().normalize();
             if (baseDir.lengthSq() < 0.01) baseDir.set(0, 0, -1);
 
-            const angles = [-0.2, 0, 0.2]; // Radians ~ 11.5 degrees spread
+            const angles = [-0.2, 0, 0.2]; 
             
             angles.forEach(angle => {
                 const shotGeo = new THREE.SphereGeometry(1.5, 8, 8);
@@ -899,7 +903,6 @@
                 shot.position.copy(player.mesh.position);
                 shot.position.y = CONFIG.fixedY;
                 
-                // Rotate base direction by angle around Y axis
                 const dir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
 
                 scene.add(shot);
@@ -1199,64 +1202,6 @@
             });
         }
 
-        function processCubes(entity) {
-            if (entity === player && debuffState.active) return;
-
-            entity.mesh.updateMatrixWorld();
-            const now = Date.now() * 0.002;
-
-            for (let i = cubes.length - 1; i >= 0; i--) {
-                const c = cubes[i];
-                c.mesh.rotation.y += c.rotateSpeed;
-
-                if (c.mesh.userData.velocity) {
-                    c.mesh.position.add(c.mesh.userData.velocity);
-                    c.mesh.userData.velocity.y -= 0.03; 
-                    if (c.mesh.position.y < CONFIG.fixedY) {
-                        c.mesh.position.y = CONFIG.fixedY;
-                        c.mesh.userData.velocity.multiplyScalar(0.5); 
-                        c.mesh.userData.velocity.y = 0;
-                    }
-                } else {
-                     const dist = entity.mesh.position.distanceTo(c.mesh.position);
-                     if (dist < 25) {
-                        c.mesh.position.lerp(entity.mesh.position, 0.25);
-                        c.mesh.position.y = THREE.MathUtils.lerp(c.mesh.position.y, entity.mesh.position.y, 0.1);
-                    } else {
-                        c.mesh.position.y = CONFIG.fixedY + Math.sin(now + c.mesh.userData.floatOffset) * 1.5;
-                    }
-                }
-                
-                const dist = entity.mesh.position.distanceTo(c.mesh.position);
-                if (dist < 5.0) { 
-                    createExplosion(c.mesh.position, c.mesh.userData.color);
-                    scene.remove(c.mesh);
-                    cubes.splice(i, 1);
-                    
-                    // Add Score logic for Player & NPCs
-                    if (entity === player) {
-                        const type = c.mesh.userData.type;
-                        score += c.mesh.userData.points;
-                        eatenCounts[type]++;
-                        if (eatenCounts[type] >= CONFIG.cubes[type].required) {
-                            addTailSegment(player, c.mesh.userData.color);
-                            eatenCounts[type] = 0; 
-                        }
-                        updateHUD();
-                    } else if (entity.score !== undefined) { // Is NPC
-                        const type = c.mesh.userData.type;
-                        entity.score += c.mesh.userData.points;
-                        if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
-                    } else {
-                        // Remote player visual only
-                        if (Math.random() < 0.3) addTailSegment(entity, c.mesh.userData.color);
-                    }
-
-                    if (!popcornMode) spawnCube(); 
-                }
-            }
-        }
-
         function checkEntityCollisions() {
             npcs.forEach(npc => {
                 const dist = player.mesh.position.distanceTo(npc.mesh.position);
@@ -1528,7 +1473,6 @@
             isGameOver = true;
             cancelAnimationFrame(animationFrameId);
             
-            // Build Scoreboard
             const allScores = [
                 { name: player.username + " (YOU)", score: score },
                 ...npcs.map(n => ({ name: n.name, score: n.score }))
@@ -1548,6 +1492,10 @@
             
             document.getElementById('result-overlay').style.display = 'flex';
         }
+
+        // =================================================================
+        //                 MAIN LOOP & INIT
+        // =================================================================
 
         function animate() {
             if (isGameOver) return;
@@ -1573,7 +1521,6 @@
             checkFeverTime(now);
             updateItemEffects(now);
 
-            // Check Teleport Expiry
             if (inventoryItem === 'teleport' && teleportState.expire > 0 && now > teleportState.expire) {
                 inventoryItem = null;
                 teleportState = { charges: 0, expire: 0 };
@@ -1582,7 +1529,6 @@
                 itemRespawnTimers['teleport'] = now + CONFIG.itemRespawnDelay;
             }
 
-            // Check Item Respawn Timers
             for (const [type, respawnTime] of Object.entries(itemRespawnTimers)) {
                 if (respawnTime > 0 && now > respawnTime) {
                     spawnItem(type);
@@ -1590,14 +1536,12 @@
                 }
             }
 
-            // Animate Items on Field
             for (let i = activeItemsOnField.length - 1; i >= 0; i--) {
                 const item = activeItemsOnField[i];
                 item.mesh.rotation.y += 0.02;
                 item.mesh.rotation.z += 0.01;
                 item.mesh.position.y = 5 + Math.sin(now * 0.005) * 1.0;
                 
-                // Collision with player
                 if (player.mesh.position.distanceTo(item.mesh.position) < 8.0) {
                     if (inventoryItem) {
                         // Inventory full
@@ -1612,7 +1556,6 @@
                 }
             }
 
-            // Update Projectiles
             for (let i = projectiles.length - 1; i >= 0; i--) {
                 const p = projectiles[i];
                 p.mesh.position.add(p.dir.clone().multiplyScalar(p.speed));
@@ -1832,7 +1775,11 @@
                 updateNPCs();
                 checkEntityCollisions();
                 
-                if (frameCount % 5 === 0 && isOnline) uploadState();
+                // --- NETWORK THROTTLING ---
+                if (now - lastNetworkUpdate > NETWORK_TICK_RATE && isOnline) {
+                    uploadState();
+                    lastNetworkUpdate = now;
+                }
             }
 
             for (const uid in remotePlayers) {
