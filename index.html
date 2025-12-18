@@ -26,7 +26,7 @@
         #nametag-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
-            z-index: 5; /* Behind UI, On top of 3D */
+            z-index: 5; /* 3D Canvas(0) < Nametag(5) < UI(10) */
             overflow: hidden;
         }
 
@@ -248,7 +248,7 @@
             color: #ffffff;
             background: rgba(0, 0, 0, 0.85); /* Darker background */
             padding: 6px 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 14px;
             font-weight: 900;
             pointer-events: none;
@@ -276,29 +276,68 @@
         #result-overlay { display: none; } /* Hidden by default */
         
         .title {
-            font-size: 60px; color: #fff; text-transform: uppercase;
+            font-size: 50px; color: #fff; text-transform: uppercase;
             text-shadow: 0 0 50px #00e5ff, 0 0 20px #00e5ff;
             margin-bottom: 10px; letter-spacing: 5px; text-align: center;
+            line-height: 1.2;
         }
         .subtitle {
-            color: #00e5ff; font-size: 16px; letter-spacing: 8px; margin-bottom: 50px; opacity: 0.8;
+            color: #00e5ff; font-size: 16px; letter-spacing: 8px; margin-bottom: 30px; opacity: 0.8;
         }
+        
+        /* New Login UI Style */
+        .login-box {
+            display: flex; flex-direction: column; gap: 15px; align-items: center; width: 320px;
+        }
+        .input-group {
+            display: flex; flex-direction: column; width: 100%; gap: 5px;
+        }
+        .input-label { color: #00e5ff; font-size: 12px; margin-left: 10px; }
         .login-input {
             background: rgba(0,0,0,0.5); border: 2px solid #00e5ff;
-            color: #fff; padding: 15px 25px; font-family: 'Orbitron';
-            font-size: 20px; text-align: center; border-radius: 30px;
-            outline: none; margin-bottom: 20px; width: 250px;
-            box-shadow: 0 0 20px rgba(0,229,255,0.2);
+            color: #fff; padding: 12px 20px; font-family: 'Orbitron';
+            font-size: 16px; text-align: center; border-radius: 30px;
+            outline: none; width: 100%; box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0,229,255,0.1);
             transition: all 0.3s;
         }
-        .login-input:focus { box-shadow: 0 0 40px rgba(0,229,255,0.5); width: 280px; }
+        .login-input:focus { box-shadow: 0 0 30px rgba(0,229,255,0.4); }
+        
+        .btn-group {
+            display: flex; gap: 10px; width: 100%; margin-top: 10px;
+        }
         .start-btn {
             background: #00e5ff; color: #000; border: none;
-            padding: 15px 40px; font-family: 'Orbitron'; font-weight: 900;
-            font-size: 18px; border-radius: 30px; cursor: pointer;
-            box-shadow: 0 0 30px #00e5ff; transition: all 0.2s;
+            padding: 12px 0; font-family: 'Orbitron'; font-weight: 900;
+            font-size: 16px; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 0 20px #00e5ff; transition: all 0.2s;
+            flex: 1;
         }
-        .start-btn:hover { transform: scale(1.1); box-shadow: 0 0 60px #00e5ff; background: #fff; }
+        .start-btn:hover { transform: scale(1.05); box-shadow: 0 0 40px #00e5ff; background: #fff; }
+        
+        .create-btn {
+            background: transparent; border: 2px solid #00e5ff; color: #00e5ff;
+            box-shadow: 0 0 10px #00e5ff;
+        }
+        .create-btn:hover { background: rgba(0, 229, 255, 0.2); transform: scale(1.05); color: #fff;}
+
+        /* Room List Style */
+        .room-list-container {
+            margin-bottom: 20px; width: 320px;
+            background: rgba(0, 10, 20, 0.8);
+            border: 1px solid #333;
+            border-radius: 10px;
+            max-height: 150px; overflow-y: auto;
+            padding: 10px;
+        }
+        .room-list-title { color: #888; font-size: 10px; margin-bottom: 5px; text-align: center; }
+        .room-item {
+            padding: 8px; border-bottom: 1px solid #333;
+            color: #ccc; font-size: 14px; cursor: pointer;
+            transition: 0.2s; display: flex; justify-content: space-between;
+        }
+        .room-item:hover { background: rgba(0, 229, 255, 0.2); color: #fff; }
+        .room-item-name { color: #00e5ff; }
 
         /* Scoreboard Style */
         .scoreboard {
@@ -343,8 +382,29 @@
     <div id="login-overlay">
         <div class="title">MiNi RooM<br>Visual Planning</div>
         <div class="subtitle">NEON ICE VERSE</div>
-        <input type="text" id="username" class="login-input" placeholder="CODENAME" maxlength="10">
-        <button class="start-btn" onclick="startGame()">CONNECT</button>
+        
+        <div class="room-list-container" id="room-list-box">
+            <div class="room-list-title">AVAILABLE ROOMS</div>
+            <div id="room-list-content">
+                <div style="text-align:center; color:#555; padding:20px;">Searching...</div>
+            </div>
+        </div>
+
+        <div class="login-box">
+            <div class="input-group">
+                <span class="input-label">ROOM NAME</span>
+                <input type="text" id="roomname" class="login-input" placeholder="LOBBY" value="LOBBY" maxlength="15">
+            </div>
+            <div class="input-group">
+                <span class="input-label">NICKNAME</span>
+                <input type="text" id="username" class="login-input" placeholder="PLAYER" maxlength="10">
+            </div>
+            
+            <div class="btn-group">
+                <button class="start-btn" onclick="startGame('join')">JOIN ROOM</button>
+                <button class="start-btn create-btn" onclick="startGame('create')">CREATE</button>
+            </div>
+        </div>
     </div>
 
     <!-- Game Over Result Overlay -->
@@ -546,6 +606,9 @@
         let isGameOver = false;
         let lastNetworkUpdate = 0;
         const NETWORK_TICK_RATE = 100; // 100ms = 10 updates/sec
+        
+        // Multi-Room State
+        let currentRoomId = "LOBBY";
 
         async function initFirebase() {
             if (!firebaseConfig) return;
@@ -563,10 +626,35 @@
                 if (user) {
                     currentUser = user;
                     isOnline = true;
-                    myDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', user.uid);
-                    setupNetworkListeners();
+                    // Note: Doc creation happens in startGame now
+                    
+                    // Listen to room list
+                    setupRoomListListener();
                 }
             });
+        }
+        
+        function setupRoomListListener() {
+             const roomsRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
+             onSnapshot(roomsRef, (snapshot) => {
+                 const container = document.getElementById('room-list-content');
+                 container.innerHTML = '';
+                 if(snapshot.empty) {
+                     container.innerHTML = '<div style="text-align:center; padding:10px; color:#555;">No rooms found. Create one!</div>';
+                     return;
+                 }
+                 
+                 snapshot.forEach(doc => {
+                     const room = doc.data();
+                     const div = document.createElement('div');
+                     div.className = 'room-item';
+                     div.innerHTML = `<span class="room-item-name">${room.roomName}</span> <span>Join &gt;</span>`;
+                     div.onclick = () => {
+                         document.getElementById('roomname').value = room.roomName;
+                     };
+                     container.appendChild(div);
+                 });
+             });
         }
 
         const CONFIG = {
@@ -1568,6 +1656,7 @@
                 username: player.username, // Send username for nametag
                 score: score,
                 tailCount: player.tailMeshes.length,
+                roomId: currentRoomId, // Room ID for filtering
                 timestamp: serverTimestamp()
             }).catch(e => console.error(e));
         }
@@ -1582,9 +1671,22 @@
                     const uid = change.doc.id;
                     if (uid === currentUser.uid) return;
                     const data = change.doc.data();
+                    
+                    // --- Room Filtering Logic ---
+                    if (data.roomId !== currentRoomId) {
+                        // Remove player if they switched rooms or are in different room
+                        if (remotePlayers[uid]) {
+                             scene.remove(remotePlayers[uid].mesh);
+                             remotePlayers[uid].tailMeshes.forEach(m => scene.remove(m));
+                             if(remotePlayers[uid].nameTag) remotePlayers[uid].nameTag.remove();
+                             delete remotePlayers[uid];
+                        }
+                        return; 
+                    }
+
                     if (change.type === 'added') {
                         remotePlayers[uid] = createRemotePlayer(uid, data);
-                        showNotification(`${data.username || "PLAYER"} JOINED!`, 3000); // Notify join
+                        showNotification(`${data.username || "PLAYER"} JOINED!`, 3000); 
                     }
                     if (change.type === 'modified') {
                         if (remotePlayers[uid]) {
@@ -1593,6 +1695,9 @@
                             if (diff > 0) {
                                 for(let k=0; k<diff; k++) addTailSegment(remotePlayers[uid], 0xff0055);
                             }
+                        } else {
+                            // Late joiner handling
+                            remotePlayers[uid] = createRemotePlayer(uid, data);
                         }
                     }
                     if (change.type === 'removed') {
@@ -1705,27 +1810,9 @@
                          scatterTails(rp, 0.1); 
                          scene.remove(p.mesh);
                          projectiles.splice(i, 1);
-                         // Break inner loop, outer loop continues
-                         // Since we splice, we should break to avoid index error or use reverse loop
-                         // Simple break is safe here as bullet hits only one target
                          return; 
                     }
                 });
-                // Legacy NPC check (if enabled)
-                for (let j = 0; j < npcs.length; j++) {
-                    if (p.mesh.position.distanceTo(npcs[j].mesh.position) < 5.0) {
-                        createExplosion(npcs[j].mesh.position, 0x00ff00, 10);
-                        const pushDir = p.dir.clone().normalize().multiplyScalar(5.0);
-                        npcs[j].velocity.add(pushDir);
-                        
-                        // Tail Drop (10% from bullet)
-                        scatterTails(npcs[j], 0.1);
-                        
-                        scene.remove(p.mesh);
-                        projectiles.splice(i, 1);
-                        break;
-                    }
-                }
             }
 
             if (wallMaterial) {
@@ -1922,7 +2009,7 @@
                 if (player.path.length > 500) player.path.pop();
 
                 updateTail(player);
-                updateNPCs();
+                updateNPCs(); // Will just return empty
                 checkEntityCollisions();
                 updateNameTag(player); // Player name tag update
                 
@@ -2055,11 +2142,31 @@
             }
         };
 
-        window.startGame = function() {
+        // START GAME: MODE (create/join)
+        window.startGame = function(mode) {
+            const roomName = document.getElementById('roomname').value;
             const username = document.getElementById('username').value || "Player";
+
+            if(!roomName) {
+                alert("Please enter a Room Name.");
+                return;
+            }
+
+            // Set Global Room ID
+            currentRoomId = roomName;
+
+            // If create mode, register room to Firestore list
+            if (mode === 'create') {
+                const roomsRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomName);
+                setDoc(roomsRef, {
+                    roomName: roomName,
+                    createdAt: serverTimestamp(),
+                    host: username
+                }).catch(e => console.error("Room create error:", e));
+            }
+
             document.getElementById('login-overlay').style.display = 'none';
             
-            // Set name tag only after username is decided
             if(player) {
                 player.username = username;
                 player.nameTag = createNameTag(username);
@@ -2068,25 +2175,40 @@
             gameStartTime = Date.now();
 
             init3D();
-            initFirebase();
+            
+            // Wait for DB init before playing
+            if(isOnline) {
+                // If already online (rare case in this flow), just set room
+            } else {
+                // Firebase is async initialized in initFirebase() call inside DOMContentLoaded or similar
+                // But here we called initFirebase() on load? No, we call it here.
+                // Wait, logic check: initFirebase() was called inside startGame in previous versions.
+                // Let's call it now if not already.
+                if(!auth) initFirebase(); 
+            }
             
             bgmAudio.src = BGM_LIST[currentBgmIndex].url;
             bgmAudio.play().catch(e => console.log("Audio autoplay blocked, will play on interaction"));
             
+            showNotification(`JOINED ROOM: ${roomName}`);
             showNotification(`WELCOME, ${username}`);
-            showNotification(`UNLIMITED BOOST ACTIVE (20s)`);
         };
         
         window.returnToMain = function() {
-             location.reload(); // Simple reload to reset everything
+             location.reload(); 
         };
 
-        function showNotification(msg) {
+        function showNotification(msg, duration=3000) {
             const el = document.getElementById('notification');
             el.innerText = msg;
             el.style.opacity = 1;
-            setTimeout(() => el.style.opacity = 0, 3000);
+            // Clear previous timeout if exists to prevent overlapping fades
+            if(el.timeoutId) clearTimeout(el.timeoutId);
+            el.timeoutId = setTimeout(() => el.style.opacity = 0, duration);
         }
+        
+        // Initial Fire
+        initFirebase();
 
     </script>
 </body>
